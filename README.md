@@ -39,7 +39,7 @@ await ollama.SendMessageAsync("Search for the latest AI news");
 
 The WPF demo shows three LLM providers (Ollama, Claude, ChatGPT) responding to the same Arabic query in parallel, each making tool calls to BraveSearch and streaming results independently.
 
-
+![WPF Demo Application](FastDemo.gif)
 ## Current Status
 
 - [x] Native LLM support with tool calling  
