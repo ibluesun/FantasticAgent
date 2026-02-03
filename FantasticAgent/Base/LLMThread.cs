@@ -19,7 +19,7 @@ using System.Threading.Channels;
 namespace FantasticAgent.Base
 {
 
-
+    public record ThreadToolCallResult(string Name, string Result);
 
     public class LLMThread<RQ, RP, TM> : ILLMThread where TM : LLMTurnMessage, new() where RQ : LLMThreadRequest<TM>, new() where RP : LLMThreadResponse<TM>, new()
     {
@@ -51,6 +51,12 @@ namespace FantasticAgent.Base
 
         public bool LogResponses { get; set; } = false;
 
+
+        protected List<ThreadToolCallResult> _ThreadToolsResults = new List<ThreadToolCallResult>();
+
+        public ThreadToolCallResult[] ToolsResults => _ThreadToolsResults.ToArray();
+
+        public int ToolsCallsCount => _ThreadToolsResults.Count;
 
 
         protected LLMThreadDebugger<LLMThread<RQ, RP, TM>> _LLMLogger;
@@ -207,7 +213,16 @@ namespace FantasticAgent.Base
         }
 
 
-        
+        public string LLMModel
+        {
+            get => ActiveRequest.Model;
+            set 
+            {
+                ActiveRequest.Model = value;
+                
+            }
+        }
+
 
         public LLMThread(string serverUri, string model, string systemRoleMessage)
         {

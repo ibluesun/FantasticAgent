@@ -1,0 +1,138 @@
+﻿<Window x:Class="FantasticAgent.WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FantasticAgent.WPF"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="600" Width="1000"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="CanResize"
+        
+        StateChanged="MainWindow_StateChanged"
+        Background="#050505">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40"  
+                      ResizeBorderThickness="5" 
+                      CornerRadius="0" 
+                      GlassFrameThickness="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <Style x:Key="CyberButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="45"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#00FF00"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#222"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="#00FF00" BorderThickness="1">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Background="#111" MouseDown="TitleBar_MouseDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
+                    <Ellipse Width="10" Height="10" Fill="Orange">
+                        <Ellipse.Effect>
+                            <DropShadowEffect Color="SkyBlue" BlurRadius="6" ShadowDepth="0"/>
+                        </Ellipse.Effect>
+                    </Ellipse>
+                    <TextBlock Text="SYSTEM READY" Foreground="#00FF00" 
+                               FontFamily="Consolas" Margin="8,0,0,0" 
+                               VerticalAlignment="Center" FontWeight="Bold"/>
+                </StackPanel>
+
+                <TextBlock Grid.Column="1" Text="[ FANTASTIC AGENT ]" 
+                           Foreground="SkyBlue" 
+                           FontFamily="Consolas" 
+                           VerticalAlignment="Center" 
+                           HorizontalAlignment="Center"
+                           />
+
+                <StackPanel Grid.Column="2" 
+                    Orientation="Horizontal" 
+                    Margin="0,0,5,0"
+                    WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button  Content="_" Click="Minimize_Click" Style="{StaticResource CyberButtonStyle}"/>
+                    <Button x:Name="btnMaximize" Content="[ ]" Click="Maximize_Click" Style="{StaticResource CyberButtonStyle}"/>
+                    <Button Content="X" Click="Close_Click" Style="{StaticResource CyberButtonStyle}" Foreground="#FF3333"/>
+                </StackPanel>
+
+                <Rectangle VerticalAlignment="Bottom" Height="1" Fill="#333" Grid.ColumnSpan="3"/>
+            </Grid>
+
+            <Grid Grid.Row="1" Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <local:LLMThreadUserControl Grid.Column="0" x:Name="OllamaThreadUC" Title="Ollama" IconBrush="Red" Margin="0,0,2,0"/>
+
+                <local:LLMThreadUserControl Grid.Column="1" x:Name="ClaudeThreadUC" Title="Claude" IconBrush="Green" Margin="2,0,2,0"/>
+
+                <local:LLMThreadUserControl Grid.Column="2" x:Name="GptThreadUC" Title="ChatGPT" IconBrush="Blue" Margin="2,0,0,0"/>
+            </Grid>
+
+            <Border Grid.Row="2" Background="Black" 
+                    BorderBrush="Gray" 
+                    BorderThickness="0,1,0,0" 
+                    Padding="5"
+                    MouseDown="ConsoleWrapper_MouseDown">
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="User> " 
+                               Foreground="#00FF00"
+                               FontFamily="Consolas"
+                               FontSize="14"
+                               VerticalAlignment="Center"/>
+
+                    <TextBox Name="ConsoleInput"
+                             Background="Transparent" 
+                             Foreground="#00FF00"
+                             FontFamily="Consolas"
+                             FontSize="14"
+                             BorderThickness="0"
+                             CaretBrush="White"
+                             Width="500" 
+                             VerticalAlignment="Center"
+                             AcceptsReturn="False"
+                             KeyDown="ConsoleInput_KeyDown"/>
+                </StackPanel>
+            </Border>
+
+        </Grid>
+    </Border>
+</Window>

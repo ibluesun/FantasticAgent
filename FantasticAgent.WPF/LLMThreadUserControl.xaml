@@ -1,0 +1,164 @@
+﻿<UserControl x:Class="FantasticAgent.WPF.LLMThreadUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:FantasticAgent.WPF"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <Style x:Key="ScrollBarThumb" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border x:Name="rectangle"
+                            Background="#444"
+                            CornerRadius="3" 
+                            Height="{TemplateBinding Height}"
+                            SnapsToDevicePixels="True"
+                            Width="{TemplateBinding Width}"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="rectangle" Property="Background" Value="#666"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="true">
+                                <Setter TargetName="rectangle" Property="Background" Value="#66FF66"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
+            <Setter Property="Stylus.IsFlicksEnabled" Value="false"/>
+            <Setter Property="Background" Value="Transparent"/>
+
+            <Setter Property="Width" Value="6"/>
+
+            <Setter Property="Opacity" Value="0"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid x:Name="Bg" SnapsToDevicePixels="true" Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="{TemplateBinding IsEnabled}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.LineUpCommand}" Opacity="0" IsHitTestVisible="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.LineDownCommand}" Opacity="0" IsHitTestVisible="False"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumb}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" Value="True">
+                                <Setter Property="Opacity" Value="1"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Border Margin="2" 
+                CornerRadius="8"
+                Background="#101010" 
+                BorderBrush="#333" 
+                BorderThickness="1"
+                SnapsToDevicePixels="True">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" 
+                    Background="#222" 
+                    CornerRadius="8,8,0,0" 
+                    Padding="10,6">
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <Ellipse Width="10" Height="10" 
+                             Margin="0,0,8,0"
+                             Fill="{Binding IconBrush, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect Color="{Binding IconBrush.Color, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                      BlurRadius="8" ShadowDepth="0"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+
+                            <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               FontFamily="Cascadia Mono"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="#888"
+                               VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="1" 
+                           Text="{Binding CallCount, StringFormat='TOOL CALLS: {0}', RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           FontFamily="Cascadia Mono"
+                           FontSize="11"
+                           Foreground="LightGray" 
+                           VerticalAlignment="Center"
+                           Margin="10,0,0,0"/>
+
+                    </Grid>
+                </Border>
+                
+                <Grid>
+                    <ProgressBar VerticalAlignment="Bottom"
+                                 Height="2"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Foreground="{Binding IconBrush, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                 IsIndeterminate="True"
+                                 Grid.ColumnSpan="2">
+
+                        <ProgressBar.Style>
+                            <Style TargetType="ProgressBar">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ProgressBar.Style>
+                    </ProgressBar>
+                </Grid>
+
+                <ScrollViewer x:Name="TerminalScroll" 
+                              Grid.Row="1" 
+                              VerticalScrollBarVisibility="Auto"
+                              Margin="6">
+                    <TextBlock x:Name="OutputBox"
+                               TextWrapping="Wrap"
+                               FontFamily="Cascadia Mono"
+                               FontSize="13"
+                               Foreground="#66FF66"
+                               LineHeight="18"
+                               />
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

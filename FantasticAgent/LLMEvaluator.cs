@@ -19,6 +19,7 @@ namespace FantasticAgent
         public LLMThread<RQ, RP, TM> MainThread => _MainThread;
 
         readonly string Prompt;
+        public string PromptText => Prompt + "[" + _MainThread.LLMModel + "]";
 
         readonly ITerminal _terminal;
 
@@ -98,6 +99,36 @@ namespace FantasticAgent
 
 
 
+
+        public event EventHandler<string> ModelChangeRequested;
+
+
+        void ChangeModel(string model)
+        {
+
+            
+            ModelChangeRequested?.Invoke(this, model);
+        }
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="commandLine">command</param>
+        async Task<bool> ProcessCommand(string commandLine)
+        {
+            var zz = commandLine.Trim().Split();
+            if (zz[0].ToUpperInvariant() == "MODEL")
+            {
+                var tt = Task.Factory.StartNew(() => ChangeModel(zz[1]));
+                await tt;
+                return true;
+            }
+
+            return false;
+        }
+
         public async Task ConsoleStreamRun()
         {
 
@@ -116,16 +147,20 @@ namespace FantasticAgent
             _MainThread.AssistantToolRequestEnded += _MainThread_ToolRequestEnded;
 
             _terminal.ForegroundColor = TerminalColor.White;
-            _terminal.Prompt($"{Prompt}> ");
+            _terminal.Prompt($"{PromptText}> ");
 
             _terminal.ForegroundColor = TerminalColor.Yellow;
 
             string? ll = _terminal.ReadLine();
 
-            while (ll != null && ll.Trim().ToUpper() != "EXIT")
+            while (ll != null && ll.Trim().ToUpper() != "EXIT" && ll.Trim().ToUpper() != "/EXIT" && ll.Trim().ToUpper() != "/QUIT")
             {
                 var um = ll.Trim();
-                if (string.IsNullOrEmpty(um) == false)
+                if (um.StartsWith('/'))
+                {
+                    await ProcessCommand(um.TrimStart('/'));
+                }
+                else if (string.IsNullOrEmpty(um) == false)
                 {
                     _MainThread.UserMessage(ll);
                     await _MainThread.SendToLLMThread();
@@ -142,7 +177,7 @@ namespace FantasticAgent
                 _terminal.WriteLine();
                 _terminal.WriteLine();
                 _terminal.ForegroundColor = TerminalColor.White;
-                _terminal.Prompt($"{Prompt}> ");
+                _terminal.Prompt($"{PromptText}> ");
                 _terminal.ForegroundColor = TerminalColor.Yellow;
                 ll = _terminal.ReadLine();
             }
@@ -165,15 +200,19 @@ namespace FantasticAgent
         {
 
             _terminal.ForegroundColor = TerminalColor.White;
-            _terminal.Prompt($"{Prompt}> ");
+            _terminal.Prompt($"{PromptText}> ");
 
             _terminal.ForegroundColor = TerminalColor.Yellow;
             string? ll = _terminal.ReadLine();
 
-            while (ll != null && ll.Trim().ToUpper() != "EXIT")
+            while (ll != null && ll.Trim().ToUpper() != "EXIT" && ll.Trim().ToUpper() != "/EXIT" && ll.Trim().ToUpper() != "/QUIT")
             {
                 var um = ll.Trim();
-                if (string.IsNullOrEmpty(um) == false)
+                if (um.StartsWith('/'))
+                {
+                    await ProcessCommand(um.TrimStart('/'));
+                }
+                else if (string.IsNullOrEmpty(um) == false)
                 {
                     _MainThread.UserMessage(ll);
                     await _MainThread.SendToLLMThreadNoStream();
@@ -213,7 +252,7 @@ namespace FantasticAgent
                 _terminal.WriteLine();
                 _terminal.WriteLine();
                 _terminal.ForegroundColor = TerminalColor.White;
-                _terminal.Prompt($"{Prompt}> ");
+                _terminal.Prompt($"{PromptText}> ");
 
                 _terminal.ForegroundColor = TerminalColor.Yellow;
                 ll = _terminal.ReadLine();

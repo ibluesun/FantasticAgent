@@ -27,14 +27,13 @@ namespace FantasticAgent
 
         readonly string OllamaServer;
         readonly int OllamaServerPort;
-        readonly string OllamaModel;
+
 
         public OllamaThread(string ollamaServer, int ollamaServerPort, string ollamaModel, string systemRole) : base($"http://{ollamaServer}:{ollamaServerPort}/api/chat", ollamaModel, systemRole)
         {
 
             OllamaServer = ollamaServer;
             OllamaServerPort = ollamaServerPort;
-            OllamaModel = ollamaModel;
 
         }
 
@@ -44,7 +43,7 @@ namespace FantasticAgent
 
             var modclient = new HttpClient();
 
-            var content = new StringContent(JsonSerializer.Serialize(new { model = OllamaModel }), Encoding.UTF8, "application/json");
+            var content = new StringContent(JsonSerializer.Serialize(new { model = LLMModel }), Encoding.UTF8, "application/json");
 
             var request = new HttpRequestMessage(HttpMethod.Post, mods)
             {
@@ -362,6 +361,9 @@ namespace FantasticAgent
                         foreach (var tc in calls)
                         {
                             var result = ExecuteFunctionCall(tc.Function);
+
+                            _ThreadToolsResults.Add(new ThreadToolCallResult(tc.Function.Name, result));
+
                             ActiveRequest.ToolReplyMessage(tc.Function.Name, result);
 
                             _LLMLogger?.LogInformation($"Function {tc.Function.Name} executed with result: {result}");

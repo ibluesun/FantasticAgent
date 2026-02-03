@@ -337,22 +337,7 @@ namespace FantasticAgent
                     }
 
 
-                    if (LogEvents)
-                    {
-                        // IMPORTANT
-                        cllog.Flush();          // push text into MemoryStream
-                        mlog.Position = 0;      // rewind stream
-
-                        // Write MemoryStream to file
-                        using (var file = File.Create("claude_events_log.txt"))
-                        {
-                            mlog.CopyTo(file);
-                        }
-                    }
-
                    
-                    cllog.Dispose();
-                    mlog.Dispose();
 
                     if (c == null || c.OuputMessages == null || c.OuputMessages.Count == 0)
                     {
@@ -363,6 +348,7 @@ namespace FantasticAgent
                     ActiveRequest.AssistantMessages(c.OuputMessages!);
 
                     IsToolReplyPending = false;
+                    string toolname = "";
 
                     foreach (var om in c.OuputMessages)
                     {
@@ -371,13 +357,37 @@ namespace FantasticAgent
                             FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
                             var result = ExecuteFunctionCall(fc);
 
+                            _ThreadToolsResults.Add(new ThreadToolCallResult(fc.Name, result));
+
                             ActiveRequest.FunctionToolReply(fc.Id, result);
 
                             _LLMLogger?.LogInformation($"Function {fc.Name}({fc.Arguments.ToString()}) executed with result: {result}");
 
                             IsToolReplyPending = true;
+                            toolname += fc.Name;
                         }
                     }
+
+                    if (LogEvents)
+                    {
+                        // IMPORTANT
+                        cllog.Flush();          // push text into MemoryStream
+                        mlog.Position = 0;      // rewind stream
+
+                        // Write MemoryStream to file
+                        string filename = "claude_events_log.txt";
+
+                        if (IsToolReplyPending) filename = $"claude_events_log_{toolname}.txt";
+
+                        using (var file = File.Create(filename))
+                        {
+                            mlog.CopyTo(file);
+                        }
+                    }
+
+
+                    cllog.Dispose();
+                    mlog.Dispose();
 
                     string reasoning = c.MessageThinking;
                     _LastReply = c.MessageContent;

@@ -164,10 +164,10 @@ namespace FantasticAgent
         }
 
 
+        //{"id":"fc_0950505599b6568300698242b183d481a39128342f60f4c6c9","type":"function_call","status":"in_progress","arguments":"","call_id":"call_BBYjEbFiJKrL9bSoUJSeuela","name":"GetCityCoordinates"}
+        public record GPTEventBlockItem (string id, string type, string status, string arguments, string call_id, string name);
 
-
-
-        public record GPTEventResponseChunk ( string type,  int sequence_number, string item_id, string delta);
+        public record GPTEventBlock ( string type, string delta, string item_id, GPTEventBlockItem item, int output_index, int sequence_number);
 
         public record GPTEventResponseCompleted(string type, int sequence_number, GPTThreadResponse response);
 
@@ -201,16 +201,23 @@ namespace FantasticAgent
 
                     string? line;
 
+                    var mlog = new MemoryStream();
+                    var cllog = new StreamWriter(mlog);
+
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
-                        GPTEventResponseChunk cc;
+                        cllog.WriteLine(line);
+
+                        GPTEventBlock cc;
                         string nextLine;
                         string payLoad;
                         switch (line)
                         {
                             case "event: response.reasoning_summary_part.added":
                                 nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
                                 InvokeAssistantReasoningStarted();
@@ -219,34 +226,76 @@ namespace FantasticAgent
                             case "event: response.reasoning_summary_text.delta":
                                 // {"type":"response.reasoning_summary_text.delta","sequence_number":452,"item_id":"rs_00fca9402f72847a00692f621c3c14819ea599984176bb46d9","output_index":0,"summary_index":3,"delta":"}","obfuscation":"yw1XOC8TxIXjaDT"}
                                 nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
-                                cc = JsonSerializer.Deserialize<GPTEventResponseChunk>(payLoad);
+                                cc = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
                                 InvokeAssistantReasoningChunkReceived(cc.delta);
                                 break;
 
                             case "event: response.reasoning_summary_part.done":
                                 nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
                                 InvokeAssistantReasoningEnded();
                                 break;
 
+
+
+                            case "event: response.output_item.added":
+                                nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
+                                payLoad = nextLine.Substring("data:".Length).Trim();
+                                var tcs = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
+                                if (tcs?.item?.type == "function_call")
+                                    InvokeToolCallingStarted(tcs.item.name);
+                                break;
+
+                            case "event: response.function_call_arguments.delta":
+                                nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
+                                payLoad = nextLine.Substring("data:".Length).Trim();
+                                InvokeToolCallingParameterChunkReceived(JsonSerializer.Deserialize<GPTEventBlock>(payLoad).delta);
+                                break;
+
+                            case "event: response.output_item.done":
+                                nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
+                                payLoad = nextLine.Substring("data:".Length).Trim();
+                                var tce = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
+                                if (tce?.item?.type == "function_call")
+                                    InvokeToolCallingEnded();
+                                break;
+
+
+
                             case "event: response.content_part.added":
                                 nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 InvokeAssistantReplyStarted();
                                 break;
 
                             case "event: response.output_text.delta":
                                 nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
                                 payLoad = nextLine.Substring("data:".Length).Trim();
-                                cc = JsonSerializer.Deserialize<GPTEventResponseChunk>(payLoad);
+                                cc = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
                                 InvokeAssistantReplyChunkReceived(cc.delta);
                                 break;
 
                             case "event: response.content_part.done":
                                 nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 InvokeAssistantReplyEnded();
                                 break;
@@ -255,6 +304,8 @@ namespace FantasticAgent
 
                             case "event: response.completed":
                                 nextLine = await reader.ReadLineAsync();
+                                cllog.WriteLine(nextLine);
+
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 c = JsonSerializer.Deserialize<GPTEventResponseCompleted>(payLoad);
 
@@ -265,6 +316,9 @@ namespace FantasticAgent
 
 
                     }
+
+
+
 
                     string reasoning = ReasoningFromThreadResponse([c.response]);  // we don't include thinking in the payload when we send the chat thread again
 
@@ -284,11 +338,15 @@ namespace FantasticAgent
 
                     IsToolReplyPending = false;
 
+                    string toolname = "";
+
                     foreach (var ot in c.response.OuputMessages)
                     {
                         if (ot.CallId != null)
                         {
                             var result = ExecuteFunctionCall(ot);
+
+                            _ThreadToolsResults.Add(new ThreadToolCallResult(ot.Name, result));
 
                             ActiveRequest.FunctionToolReply(ot.CallId, result);
 
@@ -296,9 +354,31 @@ namespace FantasticAgent
 
                             IsToolReplyPending = true;
 
+                            toolname += ot.Name;
+
                         }
                     }
 
+
+                    if (LogEvents)
+                    {
+                        // IMPORTANT
+                        cllog.Flush();          // push text into MemoryStream
+                        mlog.Position = 0;      // rewind stream
+
+                        // Write MemoryStream to file
+                        string filename = "chatgpt_events_log.txt";
+
+                        if(IsToolReplyPending) filename = $"chatgpt_events_log_{toolname}.txt";
+                        using (var file = File.Create(filename))
+                        {
+                            mlog.CopyTo(file);
+                        }
+                    }
+
+
+                    cllog.Dispose();
+                    mlog.Dispose();
 
                 }
                 //catch (Exception ex)
