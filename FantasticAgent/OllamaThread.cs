@@ -43,7 +43,7 @@ namespace FantasticAgent
 
             var modclient = new HttpClient();
 
-            var content = new StringContent(JsonSerializer.Serialize(new { model = LLMModel }), Encoding.UTF8, "application/json");
+            var content = new StringContent(JsonSerializer.Serialize(new { model = ActiveModelName }), Encoding.UTF8, "application/json");
 
             var request = new HttpRequestMessage(HttpMethod.Post, mods)
             {
@@ -67,6 +67,12 @@ namespace FantasticAgent
 
 
         }
+
+
+        public override string ProviderName => "Ollama";
+
+        public override string[] AvailableModels => new string[] { "qwen3", "gpt-oss", "ministral-3" };
+
 
 
         public override OllamaTurnMessage LastTurnMessage => ActiveRequest.TurnMessages.Last();

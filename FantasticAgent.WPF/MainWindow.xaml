@@ -5,11 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FantasticAgent.WPF"
         mc:Ignorable="d"
-        Title="MainWindow" Height="600" Width="1000"
+        Title="MainWindow" Height="800" Width="1600"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="CanResize"
-        
+        WindowStartupLocation="CenterScreen"
         StateChanged="MainWindow_StateChanged"
         Background="#050505">
 

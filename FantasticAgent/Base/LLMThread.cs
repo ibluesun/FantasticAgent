@@ -21,7 +21,7 @@ namespace FantasticAgent.Base
 
     public record ThreadToolCallResult(string Name, string Result);
 
-    public class LLMThread<RQ, RP, TM> : ILLMThread where TM : LLMTurnMessage, new() where RQ : LLMThreadRequest<TM>, new() where RP : LLMThreadResponse<TM>, new()
+    public abstract class LLMThread<RQ, RP, TM> : ILLMThread where TM : LLMTurnMessage, new() where RQ : LLMThreadRequest<TM>, new() where RP : LLMThreadResponse<TM>, new()
     {
         protected readonly HttpClient LLMHttpThreadClient;
         protected readonly Uri ServerUri;
@@ -213,7 +213,10 @@ namespace FantasticAgent.Base
         }
 
 
-        public string LLMModel
+        public abstract string ProviderName { get; }
+
+
+        public string ActiveModelName
         {
             get => ActiveRequest.Model;
             set 
@@ -222,6 +225,10 @@ namespace FantasticAgent.Base
                 
             }
         }
+
+        public string Title => $"{ProviderName}[{ActiveModelName}]";
+
+        public abstract string[] AvailableModels { get; }
 
 
         public LLMThread(string serverUri, string model, string systemRoleMessage)

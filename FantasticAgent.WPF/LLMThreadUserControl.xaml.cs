@@ -1,5 +1,7 @@
-﻿using System;
+﻿using FantasticAgent.Base;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -75,6 +77,21 @@ namespace FantasticAgent.WPF
                 new PropertyMetadata(0)); // Default value is 0
 
 
+        public double RemainingBalance
+        {
+            get { return (double)GetValue(RemainingBalanceProperty); }
+            set { SetValue(RemainingBalanceProperty, value); }
+        }
+
+        // 2. The Dependency Property Registration
+        public static readonly DependencyProperty RemainingBalanceProperty =
+            DependencyProperty.Register(
+                nameof(RemainingBalance),
+                typeof(double),
+                typeof(LLMThreadUserControl),
+                new PropertyMetadata(-1.0)); // Default value is 0
+
+
 
         // 1. The Property Wrapper
         public bool IsBusy
@@ -90,6 +107,83 @@ namespace FantasticAgent.WPF
                 typeof(bool),
                 typeof(LLMThreadUserControl),
                 new PropertyMetadata(false)); // Default is false (Not busy)
+
+
+        // --- AvailableModels Property ---
+        public static readonly DependencyProperty AvailableModelsProperty =
+            DependencyProperty.Register(nameof(AvailableModels), typeof(ObservableCollection<string>), typeof(LLMThreadUserControl),
+                new PropertyMetadata(new ObservableCollection<string>()));
+
+        public ObservableCollection<string> AvailableModels
+        {
+            get => (ObservableCollection<string>)GetValue(AvailableModelsProperty);
+            set => SetValue(AvailableModelsProperty, value);
+        }
+
+        // --- SelectedModel Property ---
+        public static readonly DependencyProperty SelectedModelProperty =
+            DependencyProperty.Register(nameof(SelectedModel), typeof(string), typeof(LLMThreadUserControl),
+                new PropertyMetadata(string.Empty));
+
+        public string SelectedModel
+        {
+            get => (string)GetValue(SelectedModelProperty);
+            set
+            {
+                SetValue(SelectedModelProperty, value);
+            }
+        }
+
+
+
+        private ILLMThread _ActiveLLMThread;
+
+        public ILLMThread ActiveLLMThread
+        {
+            get => _ActiveLLMThread;
+            set
+            {
+                _ActiveLLMThread = value;
+
+                Title = _ActiveLLMThread.Title;
+
+                AvailableModels = new ObservableCollection<string>( _ActiveLLMThread.AvailableModels);
+
+                _ActiveLLMThread.AssistantReasoningStarted += (s, e) =>
+                {
+                    this.NewReasoningParagraph();
+                    this.NewLine();
+                };
+
+                _ActiveLLMThread.AssistantReasoningChunkReceived += (s, e) => this.WriteText(e.Message);
+
+
+                _ActiveLLMThread.AssistantReplyStarted += (s, e) =>
+                {
+                    this.NewReplyParagraph();
+                    this.NewLine();
+                };
+
+                _ActiveLLMThread.AssistantReplyChunkReceived += (s, e) => this.WriteText(e.Message);
+
+
+
+                _ActiveLLMThread.AssistantToolRequestStarted += (s, e) =>
+                {
+                    this.NewToolCallParagraph();
+                    this.NewLine();
+                    this.WriteText(e.Message);
+                };
+                _ActiveLLMThread.AssistantToolRequestChunkReceived += (s, e) => this.WriteText(e.Message);
+                _ActiveLLMThread.AssistantToolRequestEnded += (s, e) =>
+                {
+                    this.WriteLine(e.Message);
+                    this.IncreaseCallsCount();
+
+                };
+            }
+        }
+
 
 
 

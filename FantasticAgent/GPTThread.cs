@@ -41,6 +41,10 @@ namespace FantasticAgent
 
 
 
+        public override string ProviderName => "ChatGPT";
+
+
+        public override string[] AvailableModels => new string[] { "gpt-5-nano", "gpt-5-mini", "gpt-5.2" };
 
         public override GPTTurnMessage LastTurnMessage => ActiveRequest.InputMessages.Last();
 

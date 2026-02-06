@@ -19,7 +19,7 @@ namespace FantasticAgent
         public LLMThread<RQ, RP, TM> MainThread => _MainThread;
 
         readonly string Prompt;
-        public string PromptText => Prompt + "[" + _MainThread.LLMModel + "]";
+        public string PromptText => Prompt + "[" + _MainThread.ActiveModelName + "]";
 
         readonly ITerminal _terminal;
 

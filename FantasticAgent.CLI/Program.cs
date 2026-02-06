@@ -33,7 +33,7 @@ namespace FantasticAgent.CLI
             ee.ModelChangeRequested += (s,e)=>
             {
 
-                oth.LLMModel = e;
+                oth.ActiveModelName = e;
             };
 
 

@@ -32,7 +32,7 @@ namespace FantasticAgent.WPF
 
         string OllamaModel = "qwen3";
 
-        private bool IsOllamaRunning(string url = "http://localhost:11434")
+        private bool OllamaExists(string url = "http://localhost:11434")
         {
             try
             {
@@ -131,9 +131,7 @@ namespace FantasticAgent.WPF
         }
 
 
-
-
-        private void PrepareLLMs()
+        void PrepareClaude()
         {
             if (!string.IsNullOrEmpty(ClaudeSecret))
             {
@@ -142,41 +140,8 @@ namespace FantasticAgent.WPF
                 claude.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
 
 
-                ClaudeThreadUC.Title = $"Claude[{claude.LLMModel}]";
 
-
-                claude.AssistantReasoningStarted += (s, e) =>
-                {
-                    ClaudeThreadUC.NewReasoningParagraph();
-                    ClaudeThreadUC.NewLine();
-                };
-                claude.AssistantReasoningChunkReceived += (s, e) => ClaudeThreadUC.WriteText(e.Message);
-
-
-                claude.AssistantReplyStarted += (s, e) =>
-                {
-                    ClaudeThreadUC.NewReplyParagraph();
-                    ClaudeThreadUC.NewLine();
-                };
-
-                claude.AssistantReplyChunkReceived += (s, e) => ClaudeThreadUC.WriteText(e.Message);
-
-
-
-                claude.AssistantToolRequestStarted += (s, e) =>
-                {
-                    ClaudeThreadUC.NewToolCallParagraph();
-                    ClaudeThreadUC.NewLine();
-                    ClaudeThreadUC.WriteText(e.Message);
-                };
-                claude.AssistantToolRequestChunkReceived += (s, e) => ClaudeThreadUC.WriteText(e.Message);
-
-                claude.AssistantToolRequestEnded += (s, e) =>
-                {
-                    ClaudeThreadUC.WriteLine(e.Message);
-                    ClaudeThreadUC.IncreaseCallsCount();
-
-                };
+                ClaudeThreadUC.ActiveLLMThread = claude;
 
 
             }
@@ -185,7 +150,10 @@ namespace FantasticAgent.WPF
                 ClaudeThreadUC.Warning("[ClaudeSecret] Environment Variable is not Present.");
             }
 
+        }
 
+        void PrepareGPT()
+        {
             if (!string.IsNullOrEmpty(GPTSecret))
             {
                 gpt = new GPTThread(GPTSecret, "gpt-5-nano", "You are a helpful assistant.");
@@ -193,41 +161,7 @@ namespace FantasticAgent.WPF
                 gpt.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
 
 
-                GptThreadUC.Title = $"ChatGPT[{gpt.LLMModel}]";
-
-
-                gpt.AssistantReasoningStarted += (s, e) =>
-                {
-                    GptThreadUC.NewReasoningParagraph();
-                    GptThreadUC.NewLine();
-                };
-
-                gpt.AssistantReasoningChunkReceived += (s, e) => GptThreadUC.WriteText(e.Message);
-
-
-                gpt.AssistantReplyStarted += (s, e) =>
-                {
-                    GptThreadUC.NewReplyParagraph();
-                    GptThreadUC.NewLine();
-                };
-
-                gpt.AssistantReplyChunkReceived += (s, e) => GptThreadUC.WriteText(e.Message);
-
-
-
-                gpt.AssistantToolRequestStarted += (s, e) =>
-                {
-                    GptThreadUC.NewToolCallParagraph();
-                    GptThreadUC.NewLine();
-                    GptThreadUC.WriteText(e.Message);
-                };
-                gpt.AssistantToolRequestChunkReceived += (s, e) => GptThreadUC.WriteText(e.Message);
-                gpt.AssistantToolRequestEnded += (s, e) =>
-                {
-                    GptThreadUC.WriteLine(e.Message);
-                    GptThreadUC.IncreaseCallsCount();
-
-                };
+                GptThreadUC.ActiveLLMThread = gpt;
 
 
             }
@@ -237,47 +171,19 @@ namespace FantasticAgent.WPF
 
             }
 
+        }
 
-            var ollamaExists = IsOllamaRunning();
+        void PrepareOllama()
+        {
+            var ollamaExists = OllamaExists();
 
             if (ollamaExists)
             {
                 ollama = new OllamaThread("localhost", 11434, OllamaModel, "You are a helpful assistant.");
                 ollama.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
-                OllamaThreadUC.Title = $"Ollama[{ollama.LLMModel}]";
-
-                ollama.AssistantReasoningStarted += (s, e) =>
-                {
-                    OllamaThreadUC.NewReasoningParagraph();
-                    OllamaThreadUC.NewLine();
-                };
-                ollama.AssistantReasoningChunkReceived += (s, e) => OllamaThreadUC.WriteText(e.Message);
 
 
-                ollama.AssistantReplyStarted += (s, e) =>
-                {
-                    OllamaThreadUC.NewReplyParagraph();
-                    OllamaThreadUC.NewLine();
-
-                };
-
-                ollama.AssistantReplyChunkReceived += (s, e) => OllamaThreadUC.WriteText(e.Message);
-
-
-
-                ollama.AssistantToolRequestStarted += (s, e) =>
-                {
-                    OllamaThreadUC.NewToolCallParagraph();
-                    OllamaThreadUC.NewLine();
-                    OllamaThreadUC.WriteText(e.Message);
-                };
-                ollama.AssistantToolRequestChunkReceived += (s, e) => OllamaThreadUC.WriteText(e.Message);
-
-                ollama.AssistantToolRequestEnded += (s, e) =>
-                {
-                    OllamaThreadUC.WriteLine(e.Message);
-                    OllamaThreadUC.IncreaseCallsCount();
-                };
+                OllamaThreadUC.ActiveLLMThread = ollama;
 
 
             }
@@ -285,6 +191,15 @@ namespace FantasticAgent.WPF
             {
                 OllamaThreadUC.Warning("Ollama is not running locally in this device.");
             }
+
+        }
+
+        private void PrepareLLMs()
+        {
+
+            PrepareClaude();
+            PrepareGPT();
+            PrepareOllama();
 
         }
 

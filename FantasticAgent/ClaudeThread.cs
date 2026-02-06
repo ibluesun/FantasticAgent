@@ -39,7 +39,9 @@ namespace FantasticAgent
         }
 
 
+        public override string ProviderName => "Claude";
 
+        public override string[] AvailableModels => new string[]{"claude-haiku-4-5","claude-sonnet-4-5", "claude-opus-4-6" };
 
 
         public override ClaudeTurnMessage LastTurnMessage => ActiveRequest.InputMessages.Last();
