@@ -132,17 +132,17 @@ namespace FantasticAgent.Base
 
         public RQ BufferedRequests { get; protected set; }
 
-        public TM UserMessage(string content)
+        public void UserMessage(string content)
         {
             if (OnGoingCall)
             {
                 // buffer the message
-                return BufferedRequests.UserMessage(content);
+                BufferedRequests.UserMessage(content);
             }
             else
             {
                 // store immediately
-                return ActiveRequest.UserMessage(content);
+                ActiveRequest.UserMessage(content);
             }
         }
 
@@ -230,6 +230,7 @@ namespace FantasticAgent.Base
 
         public abstract string[] AvailableModels { get; }
 
+        
 
         public LLMThread(string serverUri, string model, string systemRoleMessage)
         {
@@ -261,7 +262,7 @@ namespace FantasticAgent.Base
 
         public bool IsBusy => OnGoingCall;
 
-        public bool IsToolReplyPending = false;
+        public bool IsToolReplyPending { get; protected set; } = false;
 
 
 

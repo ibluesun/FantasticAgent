@@ -77,6 +77,8 @@ namespace FantasticAgent.WPF
                 new PropertyMetadata(0)); // Default value is 0
 
 
+        //
+
         public double RemainingBalance
         {
             get { return (double)GetValue(RemainingBalanceProperty); }
@@ -186,6 +188,25 @@ namespace FantasticAgent.WPF
 
 
 
+        public async Task ProcessUserMessage(string text)
+        {
+            if (_ActiveLLMThread != null)
+            {
+                this.IsBusy = true;
+                this.UserInput(text);
+                _ActiveLLMThread.UserMessage(text);
+
+                await _ActiveLLMThread.SendToLLMThread();
+
+
+                while (_ActiveLLMThread.IsToolReplyPending)
+                {
+                    // send replies now
+                    await _ActiveLLMThread.SendToLLMThread();
+                }
+                this.IsBusy = false;
+            }
+        }
 
 
 

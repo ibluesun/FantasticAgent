@@ -2,6 +2,7 @@
 using FantasticAgent.Claude;
 using FantasticAgent.GPT;
 using FantasticAgent.Tools;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Windows;
@@ -68,24 +69,6 @@ namespace FantasticAgent.WPF
 
         }
 
-        private async void ConsoleInput_KeyDown(object sender, KeyEventArgs e)
-        {
-            // Check if the user pressed Enter
-            if (e.Key == Key.Enter)
-            {
-                var textBox = sender as TextBox;
-                string command = textBox.Text;
-
-                // 1. Process the command here
-                await ProcessCommand(command);
-
-                // 2. Clear the line for the next input
-                textBox.Clear();
-
-                // 3. Mark event as handled to prevent the "Ding" sound or new line
-                e.Handled = true;
-            }
-        }
 
 
         private void ConsoleWrapper_MouseDown(object sender, MouseButtonEventArgs e)
@@ -205,86 +188,77 @@ namespace FantasticAgent.WPF
 
 
 
-        private async Task ProcessOllama(string text)
+
+
+        private async Task ProcessUserMessage(string message)
         {
-            if (ollama != null)
+            OllamaThreadUC.ProcessUserMessage(message);
+            ClaudeThreadUC.ProcessUserMessage(message);
+            GptThreadUC.ProcessUserMessage(message);
+
+
+
+        }
+
+        private async void ConsoleInput_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
             {
-                OllamaThreadUC.IsBusy = true;
-                OllamaThreadUC.UserInput(text);
-                ollama.UserMessage(text);
-
-                ollama.UserMessage(text);
-                await ollama.SendToLLMThread();
-
-
-                while (ollama.IsToolReplyPending)
+                // Check if Shift is NOT pressed
+                if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
                 {
-                    // send replies now
-                    await ollama.SendToLLMThread();
+                    // Mark as handled so the TextBox doesn't add an extra newline
+                    e.Handled = true;
+
+                    var textBox = sender as TextBox;
+                    string userMessage = textBox.Text;
+
+                    if (!string.IsNullOrWhiteSpace(userMessage))
+                    {
+                        // 1. Process the multi-line command
+                        await ProcessUserMessage(userMessage);
+
+                        // 2. Clear for the next input
+                        textBox.Clear();
+                    }
                 }
-                OllamaThreadUC.IsBusy = false;
+                // If Shift IS pressed, we do nothing. 
+                // AcceptsReturn="True" will handle adding the newline for us.
             }
         }
 
-        private async Task ProcessClaude(string text)
+        private void ConsoleInput_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (claude != null)
+            var textBox = sender as TextBox;
+            if (textBox != null)
             {
-                ClaudeThreadUC.IsBusy = true;
-                ClaudeThreadUC.UserInput(text);
-                claude.UserMessage(text);
-
-                claude.UserMessage(text);
-                await claude.SendToLLMThread();
-
-
-                while (claude.IsToolReplyPending)
-                {
-                    // send replies now
-                    await claude.SendToLLMThread();
-                }
-                ClaudeThreadUC.IsBusy = false;
+                // This forces the scrollbar to the very bottom
+                //textBox.ScrollToEnd();
             }
         }
-
-        private async Task ProcessGPT(string text)
-        {
-            if (gpt != null)
-            {
-                GptThreadUC.IsBusy = true;
-
-                GptThreadUC.UserInput(text);
-                gpt.UserMessage(text);
-
-                gpt.UserMessage(text);
-                await gpt.SendToLLMThread();
-
-
-                while (gpt.IsToolReplyPending)
-                {
-                    // send replies now
-                    await gpt.SendToLLMThread();
-                }
-
-                GptThreadUC.IsBusy = false;
-            }
-        }
-
-
-        private async Task ProcessCommand(string command)
-        {
-
-            var o = ProcessOllama(command);
-            var c = ProcessClaude(command);
-            var g = ProcessGPT(command);
-
-
-        }
-
-
-
-
-
-
     }
+
+
+
+
+    public class PercentageConverter : IValueConverter
+        {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                if (value is double actualHeight && parameter != null)
+                {
+                    if (double.TryParse(parameter.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out double percentage))
+                    {
+                        return actualHeight * percentage;
+                    }
+                }
+                return double.NaN;
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                throw new NotImplementedException();
+            }
+        }
+    
 }

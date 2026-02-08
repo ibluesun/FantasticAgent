@@ -15,6 +15,7 @@ namespace FantasticAgent.Base
         public string[] AvailableModels { get; }
 
         public string Title { get; }
+        bool IsToolReplyPending { get; }
 
         public event EventHandler<LLMAssistantEventArgs> AssistantReasoningStarted;
         public event EventHandler<LLMAssistantEventArgs> AssistantReasoningChunkReceived;
@@ -33,6 +34,7 @@ namespace FantasticAgent.Base
         public event EventHandler<LLMToolEventArgs> HostToolCalled;
         public event EventHandler<LLMToolEventArgs> HostToolReplied;
 
-
+        Task SendToLLMThread();
+        void UserMessage(string text);
     }
 }
