@@ -66,10 +66,10 @@ namespace FantasticAgent.Tools
 
         public void AddProperty(string name, MemberDataType type, bool required, string description)
         {
-            if(required) Required.Add(name.ToLowerInvariant());
+            if(required) Required.Add(name);
 
             var opd = new ObjectPropertyDescriptor(type, description);
-            Properties[name.ToLowerInvariant()] = opd;
+            Properties[name] = opd;
         }
 
 

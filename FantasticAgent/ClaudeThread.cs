@@ -357,7 +357,16 @@ namespace FantasticAgent
                         if (om.MessageContentType == "tool_use")
                         {
                             FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
-                            var result = ExecuteFunctionCall(fc);
+                            string result = "";
+
+                            try
+                            {
+                                result = ExecuteFunctionCall(fc);
+                            }
+                            catch (Exception e)
+                            {
+                                result = $"Tool call named [{fc.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                            }
 
                             _ThreadToolsResults.Add(new ThreadToolCallResult(fc.Name, result));
 
@@ -492,7 +501,16 @@ namespace FantasticAgent
                         if (om.MessageContentType == "tool_use")
                         {
                             FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
-                            var result = ExecuteFunctionCall(fc);
+
+                            string result = "";
+                            try
+                            {
+                                result = ExecuteFunctionCall(fc);
+                            }
+                            catch (Exception e)
+                            {
+                                result = $"Tool call named [{fc.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                            }
 
                             ActiveRequest.FunctionToolReply(fc.Id, result);
 

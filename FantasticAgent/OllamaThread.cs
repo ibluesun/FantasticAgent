@@ -366,7 +366,16 @@ namespace FantasticAgent
 
                         foreach (var tc in calls)
                         {
-                            var result = ExecuteFunctionCall(tc.Function);
+                            string result = "";
+
+                            try
+                            {
+                                result = ExecuteFunctionCall(tc.Function);
+                            }
+                            catch(Exception e)
+                            {
+                                result = $"Tool call named [{tc.Function.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                            }
 
                             _ThreadToolsResults.Add(new ThreadToolCallResult(tc.Function.Name, result));
 
@@ -481,7 +490,17 @@ namespace FantasticAgent
 
                         foreach (var tc in calls)
                         {
-                            var result = ExecuteFunctionCall(tc.Function);
+                            string result = "";
+
+                            try
+                            {
+                                result = ExecuteFunctionCall(tc.Function);
+                            }
+                            catch (Exception e)
+                            {
+                                result = $"Tool call named [{tc.Function.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                            }
+
                             ActiveRequest.ToolReplyMessage(tc.Function.Name, result);
 
                             _LLMLogger?.LogInformation($"Function {tc.Function.Name} executed with result: {result}");
