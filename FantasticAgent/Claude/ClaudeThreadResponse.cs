@@ -31,6 +31,16 @@ namespace FantasticAgent.Claude
         [JsonPropertyName("reasoning")]
         public ClaudeReasoning? Reasoning { get; set; }
 
+
+        [JsonPropertyName("stop_reason")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? StopReason { get; set; } = null;
+
+        [JsonPropertyName("stop_sequence")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? StopSequence { get; set; } = null;
+
+
         [JsonPropertyName("usage")]
         public ClaudeUsage? Usage { get; set; }
 

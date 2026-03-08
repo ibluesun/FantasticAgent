@@ -79,6 +79,16 @@ namespace FantasticAgent.Claude
         public string? Content { get; set; } = null;
 
 
+        [JsonPropertyName("stop_reason")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? StopReason { get; set; } = null;
+
+        [JsonPropertyName("stop_sequence")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? StopSequence { get; set; } = null;
+
+
+
 
     }
 

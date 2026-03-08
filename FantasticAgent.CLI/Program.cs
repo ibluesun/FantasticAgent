@@ -16,7 +16,8 @@ namespace FantasticAgent.CLI
         //string OllamaModel = "functiongemma";
         //string OllamaModel = "ministral-3";
         //string OllamaModel = "gpt-oss";
-        const string OllamaModel = "qwen3";
+        //const string OllamaModel = "qwen3";
+        const string OllamaModel = "qwen3.5";
         //const string OllamaModel = "mistral";
 
         static ILLMEvaluator GetOllamaEvaluator(string model = OllamaModel)
@@ -75,7 +76,7 @@ namespace FantasticAgent.CLI
 
 
 
-            ClaudeThread claude = new ClaudeThread(secretKey, "claude-sonnet-4-5", "You are a helpful assistant.");
+            ClaudeThread claude = new ClaudeThread(secretKey, "claude-sonnet-4-6", "You are a helpful assistant.");
 
             //ClaudeThread claude = new ClaudeThread(secretKey, "claude-opus-4-5", "You are a helpful assistant.");
 
@@ -98,10 +99,10 @@ namespace FantasticAgent.CLI
             DotNetEnv.Env.Load();
 
 
-            var evl = GetOllamaEvaluator();
-            //evl.LogEvents = true;
+            var evl = GetClaudeEvaluator();
+            evl.LogEvents = true;
 
-            var tt = evl.ConsoleStreamRun();
+            var tt = evl.ConsoleRun();
             tt.Wait();
 
 

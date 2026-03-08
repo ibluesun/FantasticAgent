@@ -35,7 +35,7 @@ namespace FantasticAgent.Claude
         /// Must be bigger the reasoning budge tokens
         /// </summary>
         [JsonPropertyName("max_tokens")]
-        public int MaxTokens { get; set; } = 2048;
+        public int MaxTokens { get; set; } = 8192;
 
 
         [JsonPropertyName("system")]

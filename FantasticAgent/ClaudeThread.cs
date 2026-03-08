@@ -155,7 +155,8 @@ namespace FantasticAgent
         //{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}
         public record ClaudeEventContentBlock(string type, int index, ClaudeTurnMessageContent content_block, ClaudeTurnMessageContent delta);
 
-
+        //data: {"type":"message_delta","delta":{"stop_reason":"max_tokens","stop_sequence":null},"usage":{"input_tokens":1323,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":8192}        }
+        public record ClaudeEventMessageDelta(string type, ClaudeTurnMessageContent delta, ClaudeUsage usage);
 
 
 
@@ -319,6 +320,13 @@ namespace FantasticAgent
                                 nextLine = await reader.ReadLineAsync();
                                 cllog.WriteLine(nextLine);
                                 payLoad = nextLine.Substring("data:".Length).Trim();
+
+                                var md = JsonSerializer.Deserialize<ClaudeEventMessageDelta>(payLoad);
+
+                                c.StopReason = md.delta.StopReason;
+                                c.StopSequence = md.delta.StopSequence;
+                                c.Usage = md.usage;
+                                
                                 break;
 
 
@@ -352,31 +360,37 @@ namespace FantasticAgent
                     IsToolReplyPending = false;
                     string toolname = "";
 
-                    foreach (var om in c.OuputMessages)
+
+                    if (c.StopReason == "tool_use")
                     {
-                        if (om.MessageContentType == "tool_use")
+                        // only execute tools if the reply was a complete reply.
+                        foreach (var om in c.OuputMessages)
                         {
-                            FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
-                            string result = "";
-
-                            try
+                            if (om.MessageContentType == "tool_use")
                             {
-                                result = ExecuteFunctionCall(fc);
+                                FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
+                                string result = "";
+
+                                try
+                                {
+                                    result = ExecuteFunctionCall(fc);
+                                }
+                                catch (Exception e)
+                                {
+                                    result = $"Tool call named [{fc.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                                }
+
+                                _ThreadToolsResults.Add(new ThreadToolCallResult(fc.Name, result));
+
+                                ActiveRequest.FunctionToolReply(fc.Id, result);
+
+                                _LLMLogger?.LogInformation($"Function {fc.Name}({fc.Arguments.ToString()}) executed with result: {result}");
+
+                                IsToolReplyPending = true;
+                                toolname += fc.Name;
                             }
-                            catch (Exception e)
-                            {
-                                result = $"Tool call named [{fc.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
-                            }
-
-                            _ThreadToolsResults.Add(new ThreadToolCallResult(fc.Name, result));
-
-                            ActiveRequest.FunctionToolReply(fc.Id, result);
-
-                            _LLMLogger?.LogInformation($"Function {fc.Name}({fc.Arguments.ToString()}) executed with result: {result}");
-
-                            IsToolReplyPending = true;
-                            toolname += fc.Name;
                         }
+
                     }
 
                     if (LogEvents)
@@ -496,30 +510,33 @@ namespace FantasticAgent
 
                     IsToolReplyPending = false;
 
-                    foreach (var om in c.OuputMessages)
+                    if (c.StopReason == "tool_use")
                     {
-                        if (om.MessageContentType == "tool_use")
+
+                        foreach (var om in c.OuputMessages)
                         {
-                            FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
-
-                            string result = "";
-                            try
+                            if (om.MessageContentType == "tool_use")
                             {
-                                result = ExecuteFunctionCall(fc);
+                                FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
+
+                                string result = "";
+                                try
+                                {
+                                    result = ExecuteFunctionCall(fc);
+                                }
+                                catch (Exception e)
+                                {
+                                    result = $"Tool call named [{fc.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                                }
+
+                                ActiveRequest.FunctionToolReply(fc.Id, result);
+
+                                _LLMLogger?.LogInformation($"Function {fc.Name}({fc.Arguments.ToString()}) executed with result: {result}");
+
+                                IsToolReplyPending = true;
                             }
-                            catch (Exception e)
-                            {
-                                result = $"Tool call named [{fc.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
-                            }
-
-                            ActiveRequest.FunctionToolReply(fc.Id, result);
-
-                            _LLMLogger?.LogInformation($"Function {fc.Name}({fc.Arguments.ToString()}) executed with result: {result}");
-
-                            IsToolReplyPending = true;
                         }
                     }
-
                     string reasoning = c.MessageThinking;
                     _LastReply = c.MessageContent;
 
