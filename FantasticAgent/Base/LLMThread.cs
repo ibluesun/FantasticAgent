@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -49,7 +50,7 @@ namespace FantasticAgent.Base
 
         public bool LogEvents { get; set; } = false;
 
-        public bool LogResponses { get; set; } = false;
+        public bool LogTurns { get; set; } = false;
 
 
         protected List<ThreadToolCallResult> _ThreadToolsResults = new List<ThreadToolCallResult>();
@@ -230,7 +231,13 @@ namespace FantasticAgent.Base
 
         public abstract string[] AvailableModels { get; }
 
-        
+
+        readonly string ThreadsFolder;
+        readonly string ThreadFolderDay;
+        readonly DateTime ThreadDateTime;
+        readonly string LLMThreadFolder;
+        readonly string TurnsLogFileName;
+        readonly string EventsDirectoryName;
 
         public LLMThread(string serverUri, string model, string systemRoleMessage)
         {
@@ -242,16 +249,138 @@ namespace FantasticAgent.Base
 
             ActiveRequest = new RQ();
             ActiveRequest.Model = model;
-            var msg = ActiveRequest.SystemMessage(systemRoleMessage);
+            var msg = ActiveRequest.SystemInstructionsPrompt(systemRoleMessage);
 
             BufferedRequests = new RQ();
             BufferedRequests.Model = model;
 
 
 
+            ThreadDateTime = DateTime.UtcNow;
+
+            ThreadsFolder = $"Threads\\{this.GetType().Name}s";
+            ThreadFolderDay = $"{ThreadsFolder}\\{ThreadDateTime:yyyyMMdd}";
+
+            LLMThreadFolder = $"{ThreadFolderDay}\\{ThreadDateTime:HHmmss}";
+
+            TurnsLogFileName = $"{LLMThreadFolder}\\Conversation.log";
+            EventsDirectoryName = $"{LLMThreadFolder}\\Events";
+
+            
+            Directory.CreateDirectory(LLMThreadFolder);
+
+
+
+
 
         }
 
+        public virtual void LogResponseEvent(string eventLine)
+        {
+
+            // in case it didn't created 
+            Directory.CreateDirectory(EventsDirectoryName);
+            string EventsTurnFileName = $"{EventsDirectoryName}\\Turn_{TurnId}_Events.log";
+
+
+            using (var cllog = new StreamWriter(EventsTurnFileName, true))
+            {
+                cllog.WriteLine(eventLine);
+            }
+
+
+
+        }
+
+        public virtual void LogEventsFinishedFile()
+        {
+
+            using (var cllog = new StreamWriter(TurnsLogFileName, true))
+            {
+                // in your recv entry
+                cllog.WriteLine(JsonSerializer.Serialize(new
+                {
+                    turnId = TurnId,
+                    timestamp = DateTime.UtcNow,
+                    direction = "recv",
+                    eventsFile = $"Events/Turn_{TurnId}_Events.log"  // just the filename or relative path
+                }));
+            }
+
+        }
+
+        public virtual void LogRequest(string json)
+        {
+            using (var cllog = new StreamWriter(TurnsLogFileName, true))
+            {
+                cllog.WriteLine(JsonSerializer.Serialize(new
+                {
+                    turnId = TurnId,
+                    timestamp = DateTime.UtcNow,
+                    direction = "send",
+                    payload = JsonDocument.Parse(json).RootElement
+                }));
+            }
+        }
+
+        public virtual void LogException(Exception ex)
+        {
+            using (var cllog = new StreamWriter(TurnsLogFileName, true))
+            {
+                cllog.WriteLine(JsonSerializer.Serialize(new
+                {
+                    turnId = TurnId,
+                    timestamp = DateTime.UtcNow,
+                    direction = "error",
+                    payload = new
+                    {
+                        message = ex.Message,
+                        type = ex.GetType().Name,
+                        stackTrace = ex.StackTrace
+                    }
+                }));
+            }
+        }
+
+        private object TryParseJson(string json)
+        {
+            try { return JsonDocument.Parse(json).RootElement; }
+            catch { return json; }
+        }
+
+        public virtual void LogResponseError(HttpStatusCode statusCode, string body)
+        {
+            using (var cllog = new StreamWriter(TurnsLogFileName, true))
+            {
+                cllog.WriteLine(JsonSerializer.Serialize(new
+                {
+                    turnId = TurnId,
+                    timestamp = DateTime.UtcNow,
+                    direction = "error",
+                    payload = new
+                    {
+                        statusCode = (int)statusCode,
+                        reason = statusCode.ToString(),
+                        body = TryParseJson(body)
+                    }
+                }));
+            }
+        }
+
+
+        public virtual void LogResponse(string json)
+        {
+            using (var cllog = new StreamWriter(TurnsLogFileName, true))
+            {
+                cllog.WriteLine(JsonSerializer.Serialize(new
+                {
+                    turnId = TurnId,
+                    timestamp = DateTime.UtcNow,
+                    direction = "recv",
+                    payload = JsonDocument.Parse(json).RootElement
+                }));
+            }
+        }
 
         protected readonly Channel<string> _AssistantReplies = Channel.CreateUnbounded<string>();
 
@@ -272,6 +401,9 @@ namespace FantasticAgent.Base
 
         public virtual TM LastTurnMessage { get; }
 
+
+        protected int TurnId = 0;
+
         public virtual async Task SendToLLMThread()
         {
             if (OnGoingCall)
@@ -279,7 +411,7 @@ namespace FantasticAgent.Base
 
             OnGoingCall = true;
 
-            this.ActiveRequest.Stream = true;
+            TurnId++;
 
             await OnStreamSend();
 
@@ -297,7 +429,9 @@ namespace FantasticAgent.Base
                 return;
 
             OnGoingCall = true;
-            this.ActiveRequest.Stream = false;
+
+            TurnId++;
+
 
             await OnNoStreamSend();
 

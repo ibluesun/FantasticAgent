@@ -17,23 +17,6 @@ namespace FantasticAgent.GPT
 {
 
 
-    public class GPTTurnMessageContent
-    {
-        /// <summary>
-        /// input_text  
-        /// output_text
-        /// </summary>
-        [JsonPropertyName("type")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? MessageContentType { get; set; } 
-
-        [JsonPropertyName("text")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? Text { get; set; } = null;
-
-
-    }
-
 
     public class GPTTurnMessage : LLMTurnMessage
     {

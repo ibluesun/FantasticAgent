@@ -40,9 +40,10 @@ namespace FantasticAgent.Ollama
         public string? ToolName { get; set; } = null;
 
 
-
+        [JsonIgnore]
         public override string MessageTextContent => Content == null ? string.Empty : Content;
 
+        [JsonIgnore]
         public override string? MessageReasoningOrThinking => Thinking == null? string.Empty: Thinking;
     }
 

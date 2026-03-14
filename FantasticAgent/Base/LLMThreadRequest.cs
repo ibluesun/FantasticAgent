@@ -21,10 +21,10 @@ namespace FantasticAgent.Base
 
 
         [JsonPropertyName("model")]
-        public string Model { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public virtual string? Model { get; set; } = null;
 
-        [JsonPropertyName("stream")]
-        public bool Stream { get; set; } = false;
+
 
         [JsonPropertyName("tools")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -51,7 +51,7 @@ namespace FantasticAgent.Base
 
 
 
-        public virtual TM? SystemMessage(string content)
+        public virtual TM? SystemInstructionsPrompt(string content)
         {
             throw new NotImplementedException();
         }
@@ -67,11 +67,13 @@ namespace FantasticAgent.Base
         }
 
 
-        public virtual TM? AssistantThinkingMessage(string thinking)
+        
+        public virtual TM? AssistantReplyMessage(string reply)
         {
             throw new NotImplementedException();
         }
-        public virtual TM? AssistantReplyMessage(string reply)
+
+        public virtual TM? AssistantReasoningReplyMessage(string reasoning, string reply)
         {
             throw new NotImplementedException();
         }

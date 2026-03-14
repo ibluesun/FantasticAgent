@@ -166,13 +166,27 @@ namespace FantasticAgent
 
             await Task.Run(async () =>
             {
-                var crj = JsonSerializer.Serialize(ActiveRequest);
-                var content = new StringContent(crj, Encoding.UTF8, "application/json");
+                var cloned = JsonSerializer.SerializeToDocument(ActiveRequest).RootElement;
+                using var ms = new MemoryStream();
+                using (var writer = new Utf8JsonWriter(ms))
+                {
+                    writer.WriteStartObject();
+                    foreach (var prop in cloned.EnumerateObject())
+                        prop.WriteTo(writer);
+
+                    writer.WriteBoolean("stream", true); // disable streaming explicitly
+                    writer.WriteEndObject();
+                }
+
+                ms.Position = 0;
+                var content = new StringContent(Encoding.UTF8.GetString(ms.ToArray()), Encoding.UTF8, "application/json");
+
+                if (LogTurns) LogRequest(ActiveRequest.DebugView);
+
                 var request = new HttpRequestMessage(HttpMethod.Post, ServerUri)
                 {
                     Content = content
                 };
-
 
                 try
                 {
@@ -189,17 +203,12 @@ namespace FantasticAgent
                     string? line;
 
 
-                    var mlog = new MemoryStream();
-                    var cllog = new StreamWriter(mlog);
-
-
-
                     ClaudeThreadResponse c = new ClaudeThreadResponse();
                     c.OuputMessages = new List<ClaudeTurnMessageContent>();
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
-                        cllog.WriteLine(line);
+                        if (LogEvents) LogResponseEvent(line);
                         ClaudeEventContentBlock cc;
                         string nextLine;
                         string payLoad;
@@ -209,7 +218,7 @@ namespace FantasticAgent
 
                             case "event: message_start":
                                 nextLine = await reader.ReadLineAsync();
-                                cllog.WriteLine(nextLine);
+                                if (LogEvents) LogResponseEvent(nextLine);
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
 
@@ -218,7 +227,7 @@ namespace FantasticAgent
 
                             case "event: content_block_start":
                                 nextLine = await reader.ReadLineAsync();
-                                cllog.WriteLine(nextLine);
+                                if (LogEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 var cbs = JsonSerializer.Deserialize<ClaudeEventContentBlock>(payLoad);
@@ -254,7 +263,7 @@ namespace FantasticAgent
 
                             case "event: content_block_delta":
                                 nextLine = await reader.ReadLineAsync();
-                                cllog.WriteLine(nextLine);
+                                if (LogEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 cc = JsonSerializer.Deserialize<ClaudeEventContentBlock>(payLoad);
@@ -289,7 +298,7 @@ namespace FantasticAgent
 
                             case "event: content_block_stop":
                                 nextLine = await reader.ReadLineAsync();
-                                cllog.WriteLine(nextLine);
+                                if (LogEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 var cbc = JsonSerializer.Deserialize<ClaudeEventContentBlock>(payLoad);
@@ -318,7 +327,7 @@ namespace FantasticAgent
 
                             case "event: message_delta":
                                 nextLine = await reader.ReadLineAsync();
-                                cllog.WriteLine(nextLine);
+                                if (LogEvents) LogResponseEvent(nextLine);
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
                                 var md = JsonSerializer.Deserialize<ClaudeEventMessageDelta>(payLoad);
@@ -332,7 +341,7 @@ namespace FantasticAgent
 
                             case "event: message_stop":
                                 nextLine = await reader.ReadLineAsync();
-                                cllog.WriteLine(nextLine);
+                                if (LogEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
@@ -346,8 +355,9 @@ namespace FantasticAgent
 
                     }
 
+                    if (LogEvents) LogEventsFinishedFile();
 
-                   
+
 
                     if (c == null || c.OuputMessages == null || c.OuputMessages.Count == 0)
                     {
@@ -393,26 +403,6 @@ namespace FantasticAgent
 
                     }
 
-                    if (LogEvents)
-                    {
-                        // IMPORTANT
-                        cllog.Flush();          // push text into MemoryStream
-                        mlog.Position = 0;      // rewind stream
-
-                        // Write MemoryStream to file
-                        string filename = "claude_events_log.txt";
-
-                        if (IsToolReplyPending) filename = $"claude_events_log_{toolname}.txt";
-
-                        using (var file = File.Create(filename))
-                        {
-                            mlog.CopyTo(file);
-                        }
-                    }
-
-
-                    cllog.Dispose();
-                    mlog.Dispose();
 
                     string reasoning = c.MessageThinking;
                     _LastReply = c.MessageContent;
@@ -475,6 +465,8 @@ namespace FantasticAgent
                         Content = content
                     };
 
+                    if (LogTurns) LogRequest(ActiveRequest.DebugView);
+
                     using var response = await LLMHttpThreadClient.SendAsync(request, HttpCompletionOption.ResponseContentRead).ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode == false)
@@ -484,13 +476,11 @@ namespace FantasticAgent
                     }
 
                     ClaudeThreadResponse c;
-                    if (LogResponses)
+                    if (LogTurns)
                     {
                         var tt = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        using (var cllog = new StreamWriter("claude_log.txt", false))
-                        {
-                            cllog.Write(tt);
-                        }
+                        
+                        LogResponse(tt);
                         c = JsonSerializer.Deserialize<ClaudeThreadResponse>(tt);
 
                     }

@@ -285,8 +285,23 @@ namespace FantasticAgent
 
             await Task.Run(async () =>
             {
-                var crj = JsonSerializer.Serialize(ActiveRequest);
-                var content = new StringContent(crj, Encoding.UTF8, "application/json");
+                var cloned = JsonSerializer.SerializeToDocument(ActiveRequest).RootElement;
+                using var ms = new MemoryStream();
+                using (var writer = new Utf8JsonWriter(ms))
+                {
+                    writer.WriteStartObject();
+                    foreach (var prop in cloned.EnumerateObject())
+                        prop.WriteTo(writer);
+
+                    writer.WriteBoolean("stream", true); // disable streaming explicitly
+                    writer.WriteEndObject();
+                }
+
+                ms.Position = 0;
+                var content = new StringContent(Encoding.UTF8.GetString(ms.ToArray()), Encoding.UTF8, "application/json");
+
+                if (LogTurns) LogRequest(ActiveRequest.DebugView);
+
                 var request = new HttpRequestMessage(HttpMethod.Post, ServerUri)
                 {
                     Content = content
@@ -307,14 +322,12 @@ namespace FantasticAgent
 
                     string? line;
 
-                    var mlog = new MemoryStream();
-                    var cllog = new StreamWriter(mlog);
 
 
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
-                        cllog.WriteLine(line);
+                        if (LogEvents) LogResponseEvent(line);
 
                         if (string.IsNullOrWhiteSpace(line))
                             continue;
@@ -333,23 +346,7 @@ namespace FantasticAgent
                         rrs.Add(c);
                     }
 
-                    if (LogEvents)
-                    {
-                        // IMPORTANT
-                        cllog.Flush();          // push text into MemoryStream
-                        mlog.Position = 0;      // rewind stream
-
-                        // Write MemoryStream to file
-                        using (var file = File.Create("ollama_events_log.txt"))
-                        {
-                            mlog.CopyTo(file);
-                        }
-                    }
-
-
-                    cllog.Dispose();
-                    mlog.Dispose();
-
+                    if (LogEvents) LogEventsFinishedFile();
 
 
                     string thinking = ThinkingFromThreadResponse(rrs);  // we don't include thinking in the payload when we send the chat thread again
@@ -387,8 +384,12 @@ namespace FantasticAgent
                     }
                     else
                     {
+                        if (string.IsNullOrEmpty(thinking))
+                            ActiveRequest.AssistantReplyMessage(_LastReply);
+                        else
+                            ActiveRequest.AssistantReasoningReplyMessage(thinking, _LastReply);
 
-                        ActiveRequest.AssistantReplyMessage(_LastReply);
+
 
                         // Send the assistant reply to channel.
                         await _AssistantReplies.Writer.WriteAsync(_LastReply);
@@ -445,22 +446,26 @@ namespace FantasticAgent
                         Content = content
                     };
 
+                    if (LogTurns) LogRequest(ActiveRequest.DebugView);
+
                     using var response = await LLMHttpThreadClient.SendAsync(request, HttpCompletionOption.ResponseContentRead).ConfigureAwait(false);
                     if (response.IsSuccessStatusCode == false)
                     {
                         var err = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                        if (!LogTurns) LogRequest(ActiveRequest.DebugView);
+                        LogResponseError(response.StatusCode, err);
+
                         throw new Exception($"LLM API Error: {response.StatusCode} - {err}");
                     }
 
 
                     OllamaThreadResponse c;
-                    if (LogResponses)
+                    if (LogTurns)
                     {
                         var tt = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        using (var cllog = new StreamWriter("ollama_log.txt", false))
-                        {
-                            cllog.Write(tt);
-                        }
+                        
+                        LogResponse(tt);
 
                         c = JsonSerializer.Deserialize<OllamaThreadResponse>(tt);
 
@@ -478,7 +483,7 @@ namespace FantasticAgent
                         return;
 
                     string thinking = ThinkingFromThreadResponse([c]);
-                    string reply = AssistantReplyFromThreadResponse([c]);
+                    _LastReply = AssistantReplyFromThreadResponse([c]);
 
                     ToolCall[] calls = ToolCallsFromThreadResponse([c]);
 
@@ -486,7 +491,7 @@ namespace FantasticAgent
 
                     if (calls.Length > 0)
                     {
-                        ActiveRequest.AssistantToolCalls(thinking, reply, calls);
+                        ActiveRequest.AssistantToolCalls(thinking, _LastReply, calls);
 
                         foreach (var tc in calls)
                         {
@@ -511,11 +516,13 @@ namespace FantasticAgent
                     }
                     else
                     {
-
-                        ActiveRequest.AssistantReplyMessage(reply);
+                        if (string.IsNullOrEmpty(thinking))
+                            ActiveRequest.AssistantReplyMessage(_LastReply);
+                        else
+                            ActiveRequest.AssistantReasoningReplyMessage(thinking, _LastReply);
 
                         // Send assistant reply to channel
-                        await _AssistantReplies.Writer.WriteAsync(reply);
+                        await _AssistantReplies.Writer.WriteAsync(_LastReply);
                     }
 
                 }

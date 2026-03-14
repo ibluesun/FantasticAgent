@@ -47,7 +47,7 @@ namespace FantasticAgent.Claude
         }
 
 
-        public override ClaudeTurnMessage? SystemMessage(string content)
+        public override ClaudeTurnMessage? SystemInstructionsPrompt(string content)
         {
             SystemInstructions = content;
 

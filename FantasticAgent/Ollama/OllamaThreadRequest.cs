@@ -30,7 +30,7 @@ namespace FantasticAgent.Ollama
         }
 
         #region Built In Message Signals
-        public override OllamaTurnMessage SystemMessage(string content)
+        public override OllamaTurnMessage SystemInstructionsPrompt(string content)
         {
             var msg = new OllamaTurnMessage { Role = "system", Content = content };
             TurnMessages.Add(msg);
@@ -61,16 +61,18 @@ namespace FantasticAgent.Ollama
             return msg;
         }
 
-        public override OllamaTurnMessage AssistantThinkingMessage(string thinking)
-        {
-            var msg = new OllamaTurnMessage { Role = "assistant", Thinking = thinking };
-            TurnMessages.Add(msg);
-            return msg;
-        }
+
 
         public override OllamaTurnMessage AssistantReplyMessage(string reply)
         {
             var msg = new OllamaTurnMessage { Role = "assistant", Content = reply };
+            TurnMessages.Add(msg);
+            return msg;
+        }
+
+        public override OllamaTurnMessage? AssistantReasoningReplyMessage(string reasoning, string reply)
+        {
+            var msg = new OllamaTurnMessage { Role = "assistant", Content = reply, Thinking = reasoning };
             TurnMessages.Add(msg);
             return msg;
         }

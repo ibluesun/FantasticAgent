@@ -30,10 +30,10 @@ namespace FantasticAgent
             set => _MainThread.LogEvents = value;
         }
 
-        public bool LogResponses
+        public bool LogTurns
         {
-            get => _MainThread.LogResponses;
-            set => _MainThread.LogResponses = value;
+            get => _MainThread.LogTurns;
+            set => _MainThread.LogTurns = value;
         }
 
 

@@ -43,7 +43,7 @@ namespace FantasticAgent.GPT
         }
 
 
-        public override GPTTurnMessage? SystemMessage(string content)
+        public override GPTTurnMessage? SystemInstructionsPrompt(string content)
         {
             SystemInstructions = content;
 

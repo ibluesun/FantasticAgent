@@ -1,5 +1,6 @@
 ﻿using FantasticAgent.Base;
 using FantasticAgent.Claude;
+using FantasticAgent.Gemini;
 using FantasticAgent.GPT;
 using FantasticAgent.Tools;
 using System.Globalization;
@@ -24,11 +25,13 @@ namespace FantasticAgent.WPF
     {
         static string? GPTSecret = Environment.GetEnvironmentVariable("GPTSecret");
         static string? ClaudeSecret = Environment.GetEnvironmentVariable("ClaudeSecret");
+        static string? GeminiSecret = Environment.GetEnvironmentVariable("GeminiApi");
 
 
         ClaudeThread claude;
         GPTThread gpt;
         OllamaThread ollama;
+        GeminiThread gemini;
 
 
         string OllamaModel = "qwen3";
@@ -148,9 +151,32 @@ namespace FantasticAgent.WPF
 
 
             }
-            else 
+            else
             {
                 GptThreadUC.Warning("[GPTSecret] Environment Variable is not Present.");
+
+            }
+
+        }
+        void PrepareGemini()
+        {
+            if (!string.IsNullOrEmpty(GeminiSecret))
+            {
+                gemini = new GeminiThread(GeminiSecret, "gemini-3.1-flash-lite-preview", "You are a helpful assistant.");
+
+                GeminiGenerationConfiguration conf = new GeminiGenerationConfiguration();
+                conf.ThinkingConfig = new GeminiThinkingConfiguration { IncludeThoughts = true, ThinkingLevel = ReasoningEffortLevel.Max };
+                gemini.ActiveRequest.Configuration = conf;
+                gemini.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
+
+
+                GeminiThreadUC.ActiveLLMThread = gemini;
+
+
+            }
+            else
+            {
+                GeminiThreadUC.Warning("[GeminiSecret] Environment Variable is not Present.");
 
             }
 
@@ -183,6 +209,7 @@ namespace FantasticAgent.WPF
             PrepareClaude();
             PrepareGPT();
             PrepareOllama();
+            PrepareGemini();
 
         }
 
@@ -195,6 +222,7 @@ namespace FantasticAgent.WPF
             OllamaThreadUC.ProcessUserMessage(message);
             ClaudeThreadUC.ProcessUserMessage(message);
             GptThreadUC.ProcessUserMessage(message);
+            GeminiThreadUC.ProcessUserMessage(message);
 
 
 

@@ -1,5 +1,6 @@
 ﻿using FantasticAgent.Base;
 using FantasticAgent.Claude;
+using FantasticAgent.Gemini;
 using FantasticAgent.GPT;
 using FantasticAgent.Ollama;
 
@@ -92,6 +93,37 @@ namespace FantasticAgent.CLI
 
         }
 
+        static ILLMEvaluator GetGeminiEvaluator()
+        {
+            var secretKey = Environment.GetEnvironmentVariable("GeminiAPI");
+
+
+            //string gmodel = "gemini-3-flash-preview";
+            //string gmodel = "gemini-3-flash-preview";
+            string gmodel = "gemini-3.1-flash-lite-preview";
+
+            GeminiThread gemini = new GeminiThread(secretKey, gmodel, "You are a helpful assistant.");
+
+            GeminiGenerationConfiguration conf = new GeminiGenerationConfiguration();
+            conf.ThinkingConfig = new GeminiThinkingConfiguration { IncludeThoughts = true, ThinkingLevel = ReasoningEffortLevel.Max };
+            gemini.ActiveRequest.Configuration = conf;
+
+
+
+            
+
+            //claude.ActiveRequest.Reasoning = new ClaudeReasoning();
+
+            var ee = new LLMEvaluator<GeminiThreadRequest, GeminiThreadResponse, GeminiTurnMessage>("Gemini", gemini, term);
+
+            ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetCityCoordinates")!);
+            ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetWeatherAtCoordinates")!);
+
+
+            return ee;
+
+        }
+
 
         static void Main(string[] args)
         {
@@ -101,8 +133,9 @@ namespace FantasticAgent.CLI
 
             var evl = GetClaudeEvaluator();
             evl.LogEvents = true;
+            evl.LogTurns = true;
 
-            var tt = evl.ConsoleRun();
+            var tt = evl.ConsoleStreamRun();
             tt.Wait();
 
 

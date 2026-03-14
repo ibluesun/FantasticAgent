@@ -15,6 +15,9 @@ namespace FantasticAgent.Base
         [JsonStringEnumMemberName("enabled")]
         Enabled,
 
+        [JsonStringEnumMemberName("adaptive")]
+        Adaptive
+
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

@@ -8,7 +8,8 @@ namespace FantasticAgent.Base
     public interface ILLMEvaluator
     {
 
-        bool LogResponses { get; set; }
+        bool LogTurns { get; set; }
+
         bool LogEvents { get; set; }
 
         Task ConsoleStreamRun();
