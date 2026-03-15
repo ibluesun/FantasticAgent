@@ -208,7 +208,7 @@ namespace FantasticAgent
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
-                        if (LogEvents) LogResponseEvent(line);
+                        if (LogStreamingEvents) LogResponseEvent(line);
                         ClaudeEventContentBlock cc;
                         string nextLine;
                         string payLoad;
@@ -218,7 +218,7 @@ namespace FantasticAgent
 
                             case "event: message_start":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
 
@@ -227,7 +227,7 @@ namespace FantasticAgent
 
                             case "event: content_block_start":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 var cbs = JsonSerializer.Deserialize<ClaudeEventContentBlock>(payLoad);
@@ -263,7 +263,7 @@ namespace FantasticAgent
 
                             case "event: content_block_delta":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 cc = JsonSerializer.Deserialize<ClaudeEventContentBlock>(payLoad);
@@ -298,7 +298,7 @@ namespace FantasticAgent
 
                             case "event: content_block_stop":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 var cbc = JsonSerializer.Deserialize<ClaudeEventContentBlock>(payLoad);
@@ -327,7 +327,7 @@ namespace FantasticAgent
 
                             case "event: message_delta":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
                                 var md = JsonSerializer.Deserialize<ClaudeEventMessageDelta>(payLoad);
@@ -341,7 +341,7 @@ namespace FantasticAgent
 
                             case "event: message_stop":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
@@ -355,7 +355,7 @@ namespace FantasticAgent
 
                     }
 
-                    if (LogEvents) LogEventsFinishedFile();
+                    if (LogStreamingEvents) LogEventsFinishedFile();
 
 
 
@@ -374,7 +374,7 @@ namespace FantasticAgent
                     if (c.StopReason == "tool_use")
                     {
                         // only execute tools if the reply was a complete reply.
-                        foreach (var om in c.OuputMessages)
+                        foreach (ClaudeTurnMessageContent om in c.OuputMessages)
                         {
                             if (om.MessageContentType == "tool_use")
                             {

@@ -34,15 +34,6 @@ namespace FantasticAgent.Tools
         public JsonElement Arguments { get; set; }
     }
 
-    public class ToolCall
-    {
-        [JsonPropertyName("type")]
-        public string Type { get; set; } = "function";
-
-        [JsonPropertyName("function")]
-        public required FunctionCall Function { get; set; }
-
-    }
 
 
 

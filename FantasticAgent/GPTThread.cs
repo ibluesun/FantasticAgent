@@ -224,7 +224,7 @@ namespace FantasticAgent
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
-                        if (LogEvents) LogResponseEvent(line);
+                        if (LogStreamingEvents) LogResponseEvent(line);
 
                         GPTEventBlock cc;
                         string nextLine;
@@ -233,7 +233,7 @@ namespace FantasticAgent
                         {
                             case "event: response.reasoning_summary_part.added":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
@@ -243,7 +243,7 @@ namespace FantasticAgent
                             case "event: response.reasoning_summary_text.delta":
                                 // {"type":"response.reasoning_summary_text.delta","sequence_number":452,"item_id":"rs_00fca9402f72847a00692f621c3c14819ea599984176bb46d9","output_index":0,"summary_index":3,"delta":"}","obfuscation":"yw1XOC8TxIXjaDT"}
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
@@ -253,7 +253,7 @@ namespace FantasticAgent
 
                             case "event: response.reasoning_summary_part.done":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
 
@@ -264,7 +264,7 @@ namespace FantasticAgent
 
                             case "event: response.output_item.added":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 var tcs = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
@@ -274,7 +274,7 @@ namespace FantasticAgent
 
                             case "event: response.function_call_arguments.delta":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 InvokeToolCallingParameterChunkReceived(JsonSerializer.Deserialize<GPTEventBlock>(payLoad).delta);
@@ -282,7 +282,7 @@ namespace FantasticAgent
 
                             case "event: response.output_item.done":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 var tce = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
@@ -294,7 +294,7 @@ namespace FantasticAgent
 
                             case "event: response.content_part.added":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 InvokeAssistantReplyStarted();
@@ -302,7 +302,7 @@ namespace FantasticAgent
 
                             case "event: response.output_text.delta":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 cc = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
@@ -311,7 +311,7 @@ namespace FantasticAgent
 
                             case "event: response.content_part.done":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 InvokeAssistantReplyEnded();
@@ -321,7 +321,7 @@ namespace FantasticAgent
 
                             case "event: response.completed":
                                 nextLine = await reader.ReadLineAsync();
-                                if (LogEvents) LogResponseEvent(nextLine);
+                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
                                 payLoad = nextLine.Substring("data:".Length).Trim();
                                 c = JsonSerializer.Deserialize<GPTEventResponseCompleted>(payLoad);
@@ -335,7 +335,7 @@ namespace FantasticAgent
                     }
 
 
-                    if (LogEvents) LogEventsFinishedFile();
+                    if (LogStreamingEvents) LogEventsFinishedFile();
 
 
                     string reasoning = ReasoningFromThreadResponse([c.response]);  // we don't include thinking in the payload when we send the chat thread again

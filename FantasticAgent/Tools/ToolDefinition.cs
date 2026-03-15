@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using FantasticAgent.Claude.Tools;
+using FantasticAgent.Gemini.Tools;
 using FantasticAgent.GPT.Tools;
 using FantasticAgent.Ollama.Tools;
 
@@ -20,6 +21,7 @@ namespace FantasticAgent.Tools
     [JsonDerivedType(typeof(ClaudeFunctionToolDefinition))]
     [JsonDerivedType(typeof(GPTFunctionToolDefinition))]
     [JsonDerivedType(typeof(OllamaFunctionToolDefinition))]
+    [JsonDerivedType(typeof(GeminiFunctionsDeclarationsToolDefinition))]
     public class ToolDefinition
     {
         [JsonPropertyName("type")]

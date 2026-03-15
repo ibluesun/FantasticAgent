@@ -10,7 +10,7 @@ namespace FantasticAgent.Base
 
         bool LogTurns { get; set; }
 
-        bool LogEvents { get; set; }
+        bool LogStreamingEvents { get; set; }
 
         Task ConsoleStreamRun();
 

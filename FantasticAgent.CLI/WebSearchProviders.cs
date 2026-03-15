@@ -35,7 +35,7 @@ namespace FantasticAgent.CLI
 
         public static string BraveApiKey => _BraveApiKey;
 
-
+        [LLMDescription("Web search through brave seach end point.")]
         public static JsonNode BraveSearch(string query)
         {
             using var client = new HttpClient();

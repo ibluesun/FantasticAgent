@@ -1,4 +1,5 @@
 ﻿using FantasticAgent.Base;
+using FantasticAgent.Ollama.Tools;
 using FantasticAgent.Tools;
 using System;
 using System.Collections.Concurrent;

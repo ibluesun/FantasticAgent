@@ -87,6 +87,7 @@ namespace FantasticAgent.CLI
 
             ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetCityCoordinates")!);
             ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetWeatherAtCoordinates")!);
+            ee.MainThread.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch")!);
 
 
             return ee;
@@ -105,7 +106,7 @@ namespace FantasticAgent.CLI
             GeminiThread gemini = new GeminiThread(secretKey, gmodel, "You are a helpful assistant.");
 
             GeminiGenerationConfiguration conf = new GeminiGenerationConfiguration();
-            conf.ThinkingConfig = new GeminiThinkingConfiguration { IncludeThoughts = true, ThinkingLevel = ReasoningEffortLevel.Max };
+            conf.ThinkingConfig = new GeminiThinkingConfiguration { IncludeThoughts = true, ThinkingLevel = ReasoningEffortLevel.Low };
             gemini.ActiveRequest.Configuration = conf;
 
 
@@ -132,7 +133,7 @@ namespace FantasticAgent.CLI
 
 
             var evl = GetClaudeEvaluator();
-            evl.LogEvents = true;
+            evl.LogStreamingEvents = true;
             evl.LogTurns = true;
 
             var tt = evl.ConsoleStreamRun();

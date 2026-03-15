@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace FantasticAgent.Ollama.Tools
+namespace FantasticAgent.Gemini.Tools
 {
 
     public class FunctionDefinition
@@ -35,32 +35,18 @@ namespace FantasticAgent.Ollama.Tools
 
 
 
-    public class OllamaFunctionToolDefinition : ToolDefinition
+    public class GeminiFunctionsDeclarationsToolDefinition : ToolDefinition
     {
 
-        [JsonPropertyName("type")]
-        public override ToolType ToolType => ToolType.Function;
+        [JsonPropertyName("functionDeclarations")]
+        public List<FunctionDefinition> FunctionDeclarations { get; set; } = new List<FunctionDefinition>();
 
-
-        [JsonPropertyName("function")]
-        public FunctionDefinition FunctionDefinition { get; set; }
-
-
-        public OllamaFunctionToolDefinition(FunctionDefinition functionDefinition)
+        public void AddFunctionDefinition(FunctionDefinition fd)
         {
-            FunctionDefinition = functionDefinition;
+            FunctionDeclarations.Add(fd);
         }
 
     }
 
-    public class ToolCall
-    {
-        [JsonPropertyName("type")]
-        public string Type { get; set; } = "function";
-
-        [JsonPropertyName("function")]
-        public required FunctionCall Function { get; set; }
-
-    }
 
 }

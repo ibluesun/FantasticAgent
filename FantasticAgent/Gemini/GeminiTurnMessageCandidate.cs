@@ -22,6 +22,10 @@ namespace FantasticAgent.Gemini
     public class GeminiTurnMessageCandidate
     {
 
+        [JsonPropertyName("index")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? Index { get; set; } = null;
+
         [JsonPropertyName("content")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public GeminiTurnMessageCandidateContent? Content { get; set; } = null;
@@ -30,10 +34,10 @@ namespace FantasticAgent.Gemini
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? FinishReason { get; set; } = null;
 
-
-        [JsonPropertyName("index")]
+        [JsonPropertyName("finishMessage")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? Index { get; set; } = null;
+        public string? FinishMessage { get; set; } = null;
+
 
     }
 }

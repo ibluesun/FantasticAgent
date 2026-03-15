@@ -1,9 +1,10 @@
-﻿using FantasticAgent.Base;
+﻿using FantasticAgent.Attributes;
+using FantasticAgent.Base;
 
 
 using FantasticAgent.Gemini;
-
-
+using FantasticAgent.Gemini.Tools;
+using FantasticAgent.Tools;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -36,10 +37,74 @@ namespace FantasticAgent
         public override string[] AvailableModels => new string[] { "gemini-3-flash-preview" };
 
 
+        protected Dictionary<string, FunctionDefinition> DeclaredFunctions = new Dictionary<string, FunctionDefinition>(StringComparer.OrdinalIgnoreCase);
+        GeminiFunctionsDeclarationsToolDefinition? GeminiDeclaredFunctionsTool = null;
+
         public override void DeclareFunctionTool(MethodInfo method)
         {
-            
+            ObjectDefinition methodParameters = new ObjectDefinition();
+
+            var prms = method.GetParameters();
+            foreach (var prm in prms)
+            {
+                LLMDescriptionAttribute? descAttr = prm.GetCustomAttribute<LLMDescriptionAttribute>();
+
+                string prmDescription = prm.Name!;
+                if (descAttr != null) prmDescription = descAttr.Description;
+
+                methodParameters.AddProperty(prm.Name!, IsNumeric(prm.ParameterType) ? MemberDataType.Number : MemberDataType.String, true, prmDescription);
+            }
+
+
+            string MethodDescription = method.Name;
+            LLMDescriptionAttribute? methDesc = method.GetCustomAttribute<LLMDescriptionAttribute>();
+            if (methDesc != null) MethodDescription = methDesc.Description;
+
+
+
+            FunctionDefinition f = new FunctionDefinition(method.Name, MethodDescription, methodParameters);
+            f.UnderlyingMethod = method;
+
+            DeclaredFunctions.Add(f.Name, f);
+
+            if (GeminiDeclaredFunctionsTool == null)
+            {
+                GeminiDeclaredFunctionsTool = new GeminiFunctionsDeclarationsToolDefinition();
+                this.DeclareTool(GeminiDeclaredFunctionsTool);
+            }
+
+            GeminiDeclaredFunctionsTool.AddFunctionDefinition(f);
         }
+
+
+        public object? ExecuteFunctionCall(GeminiPartFunctionCall call)
+        {
+            if (!DeclaredFunctions.TryGetValue(call.Name, out var funcDef))
+                throw new LLMException($"Function '{call.Name}' not declared");
+            var method = funcDef.UnderlyingMethod;
+            if (method == null)
+                throw new LLMException($"Function '{call.Name}' has no underlying method");
+            var parameters = method.GetParameters();
+            var args = new object?[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var prm = parameters[i];
+                var ncargs = NormalizeArguments(call.Arguments);
+                var argProperty = ncargs.GetProperty(prm.Name!);
+                if (argProperty.ValueKind == JsonValueKind.String)
+                    args[i] = Convert.ChangeType(argProperty.GetString(), prm.ParameterType);
+                else if (argProperty.ValueKind == JsonValueKind.Number)
+                    args[i] = Convert.ChangeType(argProperty.GetDouble(), prm.ParameterType);
+                else
+                    args[i] = Convert.ChangeType(argProperty.GetRawText(), prm.ParameterType);
+
+            }
+            var result = method.Invoke(null, args);
+            return result;
+
+        }
+
+
 
         private string AssistantReplyFromThreadResponse(ICollection<GeminiTurnMessageCandidate> candidates)
         {
@@ -89,6 +154,27 @@ namespace FantasticAgent
             return sb.ToString();
         }
 
+        private GeminiPartFunctionCall[] CallsFromThreadResponse(ICollection<GeminiTurnMessageCandidate> candidates)
+        {
+            List<GeminiPartFunctionCall> calls = new List<GeminiPartFunctionCall>();
+
+            foreach (var candy in candidates)
+            {
+                if (candy.Content != null && candy.Content.Parts != null)
+                {
+                    foreach (var contentPart in candy.Content.Parts)
+                    {
+                        if (contentPart.FunctionCall != null)
+                            calls.Add(contentPart.FunctionCall);
+                    }
+                }
+
+            }
+
+
+            return calls.ToArray();
+        }
+
         public override GeminiTurnMessage LastTurnMessage => ActiveRequest.Contents.LastOrDefault();
 
 
@@ -128,7 +214,7 @@ namespace FantasticAgent
                     {
                         var err = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                        if(!LogTurns) LogRequest(ActiveRequest.DebugView);
+                        if (!LogTurns) LogRequest(ActiveRequest.DebugView);
                         LogResponseError(response.StatusCode, err);
                         throw new Exception($"LLM API Error: {response.StatusCode} - {err}");
                     }
@@ -157,19 +243,51 @@ namespace FantasticAgent
                     if (c == null)
                         return;
 
+
+
+                    if (c == null || c.Candidates == null || c.Candidates.Count == 0)
+                    {
+                        IsToolReplyPending = false;
+                        return;
+                    }
+
+
+                    IsToolReplyPending = false;
+                    // each candidate will be a turn message
+                    foreach (var ot in c.Candidates)
+                    {
+                        ActiveRequest.AssistantFromCandidate(ot);
+
+                        foreach (var prt in ot.Content!.Parts!)
+                        {
+                            if (prt.FunctionCall != null)
+                            {
+                                object? result = null;
+                                try
+                                {
+                                    result = ExecuteFunctionCall(prt.FunctionCall);
+                                }
+                                catch (Exception e)
+                                {
+                                    result = $"Tool call named [{prt.FunctionCall.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                                }
+
+                                ActiveRequest.FunctionToolReply(prt.FunctionCall.Name!, result!);
+
+                                _LLMLogger?.LogInformation($"Function {prt.FunctionCall.Name}({prt.FunctionCall.Arguments.ToString()}) executed with result: {result}");
+
+                                IsToolReplyPending = true;
+                            }
+                        }
+                    }
+
                     string reasoning = ReasoningFromThreadResponse(c.Candidates!);
                     _LastReply = AssistantReplyFromThreadResponse(c.Candidates!);
 
-                    
-                    if (string.IsNullOrEmpty(reasoning))
-                        ActiveRequest.AssistantReplyMessage(_LastReply);
-                    else
-                        ActiveRequest.AssistantReasoningReplyMessage(reasoning, _LastReply);
 
 
-                        
 
-                    
+
 
                     if (!string.IsNullOrEmpty(_LastReply))
                     {
@@ -179,33 +297,6 @@ namespace FantasticAgent
 
 
 
-                    /*
-
-                    IsToolReplyPending = false;
-
-                    foreach (var ot in c.OuputMessages)
-                    {
-                        if (ot.CallId != null)
-                        {
-                            string result = "";
-                            try
-                            {
-                                result = ExecuteFunctionCall(ot);
-                            }
-                            catch (Exception e)
-                            {
-                                result = $"Tool call named [{ot.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
-                            }
-
-                            ActiveRequest.FunctionToolReply(ot.CallId, result);
-
-                            _LLMLogger?.LogInformation($"Function {ot.Name}({ot.Arguments.ToString()}) executed with result: {result}");
-
-                            IsToolReplyPending = true;
-
-                        }
-                    }
-                        */
                 }
                 //catch(Exception ex)
                 //{
@@ -234,6 +325,8 @@ namespace FantasticAgent
         {
             var MessageThinking = ReasoningFromThreadResponse(c.candidates);
             var MessageContent = AssistantReplyFromThreadResponse(c.candidates);
+            var MessageCalls = CallsFromThreadResponse(c.candidates);
+
             string? finishReason = c.candidates.Where(candy => string.IsNullOrEmpty(candy.FinishReason) == false).Select(candy => candy.FinishReason).FirstOrDefault();
 
             if (string.IsNullOrEmpty(finishReason)) finishReason = "";
@@ -260,40 +353,40 @@ namespace FantasticAgent
             }
 
 
-            /*
-            else if (c.Message.ToolCalls != null && c.Message.ToolCalls.Count > 0 && ReplyFlow == ReplyLadder.Thinking)
+            
+            else if (MessageCalls != null && MessageCalls.Length > 0 && ReplyFlow == ReplyLadder.Thinking)
             {
                 // we were reasoning then we needed a tool call
                 ReplyFlow = ReplyLadder.Tooling;
                 InvokeAssistantReasoningEnded();
 
                 // in ollama the tool use is done in one line  so we need to call the three functions here
-                foreach (var tt in c.Message.ToolCalls)
+                foreach (var tt in MessageCalls)
                 {
-                    InvokeToolCallingStarted(tt.Function.Name);
-                    InvokeToolCallingParameterChunkReceived(tt.Function.Arguments.ToString());
+                    InvokeToolCallingStarted(tt.Name!);
+                    InvokeToolCallingParameterChunkReceived(tt.Arguments.ToString());
                     InvokeToolCallingEnded();
                 }
 
 
             }
 
-            else if (c.Message.ToolCalls != null && c.Message.ToolCalls.Count > 0 && ReplyFlow == ReplyLadder.Nothing)
+            else if (MessageCalls != null && MessageCalls.Length > 0 && ReplyFlow == ReplyLadder.Nothing)
             {
                 // we jumped to the tool call immediately without thinking .. some models do that 
                 ReplyFlow = ReplyLadder.Tooling;
 
                 // in ollama the tool use is done in one line  so we need to call the three functions here
-                foreach (var tt in c.Message.ToolCalls)
+                foreach (var tt in MessageCalls)
                 {
-                    InvokeToolCallingStarted(tt.Function.Name);
-                    InvokeToolCallingParameterChunkReceived(tt.Function.Arguments.ToString());
+                    InvokeToolCallingStarted(tt.Name!);
+                    InvokeToolCallingParameterChunkReceived(tt.Arguments.ToString());
                     InvokeToolCallingEnded();
                 }
 
 
             }
-            */
+            
 
             else if (string.IsNullOrEmpty(MessageContent) == false && ReplyFlow == ReplyLadder.Thinking)
             {
@@ -396,7 +489,7 @@ namespace FantasticAgent
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
-                        if (LogEvents) LogResponseEvent(line);
+                        if (LogStreamingEvents) LogResponseEvent(line);
                         GeminiEventBlock cc;
 
                         string payLoad;
@@ -422,14 +515,22 @@ namespace FantasticAgent
                                         {
                                             Thoughts.Parts.Add(prt);
                                         }
-                                        else
+                                        else if (prt.FunctionCall != null)
+                                        {
+                                            Thoughts.Parts.Add(prt);
+                                        }
+                                        else if(!string.IsNullOrEmpty(prt.Text))
                                         {
                                             Reply.Parts.Add(prt);
                                         }
                                     }
                                 }
 
-                                c.Done = candy.FinishReason == "STOP";
+                                if (candy.FinishReason != null && candy.FinishReason.Length > 0)
+                                {
+                                    c.Done = candy.FinishReason == "STOP";
+                                    c.FinishReason = candy.FinishReason;
+                                }
                             }
 
                             c.Usage = cbs.usageMetadata;
@@ -437,12 +538,13 @@ namespace FantasticAgent
                             c.ResponseId = cbs.responseId;
                             
                             
+                            
                         }
 
                     }
 
 
-                    if (LogEvents) LogEventsFinishedFile();
+                    if (LogStreamingEvents) LogEventsFinishedFile();
 
                     if (c == null || c.Candidates == null || c.Candidates.Count == 0)
                     {
@@ -451,57 +553,42 @@ namespace FantasticAgent
                     }
 
 
-
                     IsToolReplyPending = false;
-                    /*
-                    string toolname = "";
-
-                    if (c.StopReason == "tool_use")
+                    // each candidate will be a turn message
+                    foreach (var ot in c.Candidates)
                     {
-                        // only execute tools if the reply was a complete reply.
-                        foreach (var om in c.OuputMessages)
-                        {
-                            if (om.MessageContentType == "tool_use")
-                            {
-                                FunctionCall fc = new FunctionCall { Id = om.Id, Name = om.Name, Arguments = om.Input };
-                                string result = "";
+                        ActiveRequest.AssistantFromCandidate(ot);
 
+                        foreach (var prt in ot.Content!.Parts!)
+                        {
+                            if (prt.FunctionCall != null)
+                            {
+                                object? result = null;
                                 try
                                 {
-                                    result = ExecuteFunctionCall(fc);
+                                    result = ExecuteFunctionCall(prt.FunctionCall);
                                 }
                                 catch (Exception e)
                                 {
-                                    result = $"Tool call named [{fc.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
+                                    result = $"Tool call named [{prt.FunctionCall.Name}] has halted because of a catastrophic internal runtime exception description of [{e.Message}]. Stop calling this function again and tell the user to report to developers about this function.";
                                 }
 
-                                _ThreadToolsResults.Add(new ThreadToolCallResult(fc.Name, result));
+                                ActiveRequest.FunctionToolReply(prt.FunctionCall.Name!, result!);
 
-                                ActiveRequest.FunctionToolReply(fc.Id, result);
-
-                                _LLMLogger?.LogInformation($"Function {fc.Name}({fc.Arguments.ToString()}) executed with result: {result}");
+                                _LLMLogger?.LogInformation($"Function {prt.FunctionCall.Name}({prt.FunctionCall.Arguments.ToString()}) executed with result: {result}");
 
                                 IsToolReplyPending = true;
-                                toolname += fc.Name;
                             }
                         }
-
                     }
-                    */
 
-                    
 
                     string reasoning = ReasoningFromThreadResponse(c.Candidates!);
                     _LastReply = AssistantReplyFromThreadResponse(c.Candidates!);
 
-                    
-                    if (string.IsNullOrEmpty(reasoning))
-                        ActiveRequest.AssistantReplyMessage(_LastReply);
-                    else
-                        ActiveRequest.AssistantReasoningReplyMessage(reasoning, _LastReply);
 
 
-                    
+               
 
                     if (!string.IsNullOrEmpty(_LastReply))
                     {

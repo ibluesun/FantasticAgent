@@ -48,7 +48,7 @@ namespace FantasticAgent.Base
         public event EventHandler<LLMToolEventArgs> HostToolReplied;
 
 
-        public bool LogEvents { get; set; } = false;
+        public bool LogStreamingEvents { get; set; } = false;
 
         public bool LogTurns { get; set; } = false;
 

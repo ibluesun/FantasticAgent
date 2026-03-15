@@ -108,6 +108,49 @@ namespace FantasticAgent.Gemini
             return tm;
         }
 
-        
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="callId"></param>
+        /// <param name="jsonOutput">Json formatted text</param>
+        /// <returns></returns>
+        public GeminiTurnMessage FunctionToolReply(string name, object result)
+        {
+
+            GeminiPartFunctionResponse fr = new GeminiPartFunctionResponse();
+            fr.Name = name;
+            fr.Response = result;
+
+            GeminiPart mc = new GeminiPart
+            {
+
+                FunctionResponse = fr
+            };
+
+            GeminiTurnMessage tm = new GeminiTurnMessage
+            {
+                Role = "user",
+                Parts = [mc]
+            };
+
+            Contents.Add(tm);
+            return tm;
+        }
+
+
+        public GeminiTurnMessage AssistantFromCandidate(GeminiTurnMessageCandidate candidate)
+        {
+            if (candidate.Content.Parts.Count == 0) return null;
+            GeminiTurnMessage tm = new GeminiTurnMessage
+            {
+                Role = "model",
+                Parts = candidate.Content!.Parts!
+            };
+
+            Contents.Add(tm);
+            return tm;
+        }
+
     }
 }

@@ -327,7 +327,7 @@ namespace FantasticAgent
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
-                        if (LogEvents) LogResponseEvent(line);
+                        if (LogStreamingEvents) LogResponseEvent(line);
 
                         if (string.IsNullOrWhiteSpace(line))
                             continue;
@@ -346,7 +346,7 @@ namespace FantasticAgent
                         rrs.Add(c);
                     }
 
-                    if (LogEvents) LogEventsFinishedFile();
+                    if (LogStreamingEvents) LogEventsFinishedFile();
 
 
                     string thinking = ThinkingFromThreadResponse(rrs);  // we don't include thinking in the payload when we send the chat thread again
@@ -361,7 +361,7 @@ namespace FantasticAgent
                     {
                         ActiveRequest.AssistantToolCalls(thinking, _LastReply, calls);
 
-                        foreach (var tc in calls)
+                        foreach (ToolCall tc in calls)
                         {
                             string result = "";
 

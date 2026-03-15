@@ -32,5 +32,10 @@ namespace FantasticAgent.Gemini
 
 
 
+        [JsonPropertyName("finishReason")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? FinishReason { get; set; } = null;
+
+
     }
 }

@@ -24,10 +24,10 @@ namespace FantasticAgent
         readonly ITerminal _terminal;
 
 
-        public bool LogEvents
+        public bool LogStreamingEvents
         {
-            get => _MainThread.LogEvents;
-            set => _MainThread.LogEvents = value;
+            get => _MainThread.LogStreamingEvents;
+            set => _MainThread.LogStreamingEvents = value;
         }
 
         public bool LogTurns

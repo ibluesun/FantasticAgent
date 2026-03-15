@@ -34,7 +34,7 @@ namespace FantasticAgent.WPF
         GeminiThread gemini;
 
 
-        string OllamaModel = "qwen3";
+        string OllamaModel = "qwen3.5";
 
         private bool OllamaExists(string url = "http://localhost:11434")
         {
@@ -121,7 +121,7 @@ namespace FantasticAgent.WPF
         {
             if (!string.IsNullOrEmpty(ClaudeSecret))
             {
-                claude = new ClaudeThread(ClaudeSecret, "claude-sonnet-4-5", "You are a helpful assistant.");
+                claude = new ClaudeThread(ClaudeSecret, "claude-sonnet-4-6", "You are a helpful assistant.");
                 claude.ActiveRequest.Reasoning = new ClaudeReasoning();
                 claude.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
 

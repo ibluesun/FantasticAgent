@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using FantasticAgent.Ollama.Tools;
 
 
 namespace FantasticAgent.Ollama
