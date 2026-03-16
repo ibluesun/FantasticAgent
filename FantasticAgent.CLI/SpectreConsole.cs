@@ -58,7 +58,7 @@ namespace FantasticAgent.CLI
         }
         public string PromptText { get; set; } = "sterm";
 
-        private TerminalColor _currentColor = TerminalColor.Default;
+        private TerminalColor _currentColor = TerminalColor.White;
 
         public void Write(string text)
         {

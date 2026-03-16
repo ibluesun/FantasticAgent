@@ -34,7 +34,7 @@ namespace FantasticAgent.WPF
         GeminiThread gemini;
 
 
-        string OllamaModel = "qwen3.5";
+        string OllamaModel = "qwen3";
 
         private bool OllamaExists(string url = "http://localhost:11434")
         {

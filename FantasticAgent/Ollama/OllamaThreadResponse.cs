@@ -30,7 +30,18 @@ namespace FantasticAgent.Ollama
 
 
         [JsonPropertyName("error")]
-        public string? Error { get; set; }
+        public string? ErrorMessage { get; set; }
+
+        [JsonIgnore]
+        public override LLMError? Error 
+        { 
+            get 
+            {
+                if (string.IsNullOrEmpty(ErrorMessage)) return null;
+
+                return new LLMError { Message = ErrorMessage };
+            }
+        }
 
 
         public override string MessageContent => Message.Content;

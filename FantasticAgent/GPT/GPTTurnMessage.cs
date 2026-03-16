@@ -91,7 +91,8 @@ namespace FantasticAgent.GPT
                     StringBuilder sb = new StringBuilder();
                     foreach (var content in Contents)
                     {
-                        if (content.Text != null)
+                        
+                        if (content.MessageContentType == "output_text" && content.Text != null)
                         {
                             sb.Append(content.Text);
                         }
@@ -107,9 +108,23 @@ namespace FantasticAgent.GPT
         {
             get
             {
+                StringBuilder sb = new StringBuilder();
+
+                // old chatgpt models or opensource models don't use summaries .. they use reasoning_text type inside content
+                if (Contents != null)
+                {
+                    
+                    foreach (var content in Contents)
+                    {
+                        if (content.MessageContentType == "reasoning_text" && content.Text != null)
+                        {
+                            sb.Append(content.Text);
+                        }
+                    }
+                    
+                }
                 if (Summaries != null)
                 {
-                    StringBuilder sb = new StringBuilder();
                     foreach (var content in Summaries)
                     {
                         if (content.Text != null)
@@ -117,9 +132,11 @@ namespace FantasticAgent.GPT
                             sb.Append(content.Text);
                         }
                     }
-                    return sb.ToString();
                 }
-                return null;
+
+                if (sb.Length == 0) return null;
+
+                return sb.ToString();
             }
         }
 

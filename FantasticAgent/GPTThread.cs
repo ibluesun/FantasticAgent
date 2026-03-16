@@ -21,6 +21,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FantasticAgent
 {
@@ -48,6 +49,8 @@ namespace FantasticAgent
         }
 
 
+        protected virtual bool SupportsReasoningItems => true;
+
         public override string ProviderName => "ChatGPT";
 
 
@@ -57,53 +60,54 @@ namespace FantasticAgent
 
 
 
-        private string AssistantReplyFromThreadResponse(ICollection<GPTThreadResponse> replies)
+        private string AssistantReplyFromThreadResponse(GPTThreadResponse tr)
         {
             StringBuilder sb = new StringBuilder();
 
-            foreach (GPTThreadResponse tr in replies)
+
+            if (tr.OuputMessages != null)
             {
-                if (tr.OuputMessages != null)
+                foreach (var msg in tr.OuputMessages)
                 {
-                    foreach (var msg in tr.OuputMessages)
+                    if (msg.Contents != null)
                     {
-                        if (msg.Contents != null)
+                        foreach (var content in msg.Contents)
                         {
-                            foreach (var content in msg.Contents)
+                            if (content.MessageContentType == "output_text" && content.Text != null)
                             {
                                 sb.Append(content.Text);
                             }
                         }
-
                     }
-                }
 
+                }
             }
+
+
             return sb.ToString();
         }
 
-        private string ReasoningFromThreadResponse(ICollection<GPTThreadResponse> replies)
+        private string ReasoningFromThreadResponse(GPTThreadResponse tr)
         {
             StringBuilder sb = new StringBuilder();
 
-            foreach (GPTThreadResponse tr in replies)
+
+            if (tr.OuputMessages != null)
             {
-                if (tr.OuputMessages != null)
+                foreach (var msg in tr.OuputMessages)
                 {
-                    foreach (var msg in tr.OuputMessages)
+                    if (msg.Summaries != null)
                     {
-                        if (msg.Summaries != null)
+                        foreach (var summary in msg.Summaries)
                         {
-                            foreach (var summary in msg.Summaries)
-                            {
-                                sb.Append(summary.Text);
-                            }
+                            sb.Append(summary.Text);
                         }
-
                     }
-                }
 
+                }
             }
+
+
             return sb.ToString();
         }
 
@@ -176,9 +180,28 @@ namespace FantasticAgent
 
 
         //{"id":"fc_0950505599b6568300698242b183d481a39128342f60f4c6c9","type":"function_call","status":"in_progress","arguments":"","call_id":"call_BBYjEbFiJKrL9bSoUJSeuela","name":"GetCityCoordinates"}
-        public record GPTEventBlockItem (string id, string type, string status, string arguments, string call_id, string name);
+        public record OutputItemEventDetails (string id, string type, string status, string arguments, string call_id, string name);
 
-        public record GPTEventBlock ( string type, string delta, string item_id, GPTEventBlockItem item, int output_index, int sequence_number);
+        public record OutputItemEvent ( string type, OutputItemEventDetails item, int output_index, int sequence_number);
+
+
+        //{"type":"response.reasoning_summary_text.delta","delta":" \"","item_id":"rs_013e7dd7ce51acc00069b59a314c608192b615ffdb91737d98","obfuscation":"64X4RKKi48PpxX","output_index":0,"sequence_number":72,"summary_index":0}
+        //{"type":"response.output_text.delta","content_index":0,"delta":" the","item_id":"msg_013e7dd7ce51acc00069b59a3951b08192ab9a75a6b40a8cb4","logprobs":[],"obfuscation":"hN8r0osUzlpv","output_index":1,"sequence_number":379}
+        public record OutputItemEventDelta(string type, int content_index, string delta, string item_id, string obfuscation, int output_index, int sequence_number, int? summary_index);
+
+
+
+
+        //"part":{"type":"reasoning_text","text":""}
+        //"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""}
+        public record ContentPartEventDetails(string type, string text);
+
+
+        //{"type":"response.content_part.added","content_index":0,"item_id":"msg_013e7dd7ce51acc00069b59a3951b08192ab9a75a6b40a8cb4","output_index":1,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""},"sequence_number":357}
+        //{"type":"response.content_part.added","item_id":"rs_bcb7c796228b5e9b37f2d580d5b4214207d5b0995631f30d","output_index":0,"content_index":0,"part":{"type":"reasoning_text","text":""},"sequence_number":3}
+        public record ContentPartEvent(string type, string item_id, ContentPartEventDetails part, int sequence_number);
+
+
 
         public record GPTEventResponseCompleted(string type, int sequence_number, GPTThreadResponse response);
 
@@ -199,6 +222,8 @@ namespace FantasticAgent
                         prop.WriteTo(writer);
 
                     writer.WriteBoolean("stream", true); // disable streaming explicitly
+                    writer.WriteBoolean("store", false); // disable streaming explicitly
+
                     writer.WriteEndObject();
                 }
 
@@ -222,128 +247,146 @@ namespace FantasticAgent
                     using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                     using var reader = new StreamReader(stream);
 
-                    GPTEventResponseCompleted c = null;
+                    GPTEventResponseCompleted completedEvent = null;
+                    GPTEventResponseCompleted failedEvent = null;
 
                     string? line;
 
 
+                    /*
+                     
+                    it should be noted that old openai models doesn't use reasoning_summary
+
+                    also .. should be noted that some implementations or maybe old ones .. do not emit event: [event type]:  line
+                     */
 
                     while ((line = await reader.ReadLineAsync()) is not null)
                     {
                         if (LogStreamingEvents) LogResponseEvent(line);
 
-                        // ✅ Detect raw error envelope (Groq sends this before any real events)
+                        // ✅ Detect raw error envelope 
                         if (line.StartsWith("{\"error\""))
                         {
                             var error = JsonSerializer.Deserialize<ErrorEnvelope>(line);
-                            throw new LLMException(error.ToString());
+                            InvokeAssistantErrorReceived(error!.Error!);
+                            IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                            return;
                         }
 
-                        GPTEventBlock cc;
-                        string nextLine;
-                        string payLoad;
-                        switch (line)
+
+                        string? eventType = null;
+                        string? payLoad = null;
+
+                        if (line.StartsWith("event:"))
+                        {
+                            eventType = line.Substring("event:".Length).Trim();
+                            var nextLine = await reader.ReadLineAsync();
+                            if (LogStreamingEvents) LogResponseEvent(nextLine!);
+                            payLoad = nextLine!.Substring("data:".Length).Trim();
+                        }
+                        else if (line.StartsWith("data:"))
+                        {
+                            payLoad = line.Substring("data:".Length).Trim();
+                            // peek type from inside the JSON
+                            using var doc = JsonDocument.Parse(payLoad);
+                            eventType = doc.RootElement.GetProperty("type").GetString()!;
+                        }
+
+
+                        switch (eventType)
                         {
 
-                            case "event: response.reasoning_summary_part.added":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
-
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-
+                            
+                            case "response.reasoning_summary_part.added":
                                 InvokeAssistantReasoningStarted();
                                 break;
 
-                            case "event: response.reasoning_summary_text.delta":
-                                // {"type":"response.reasoning_summary_text.delta","sequence_number":452,"item_id":"rs_00fca9402f72847a00692f621c3c14819ea599984176bb46d9","output_index":0,"summary_index":3,"delta":"}","obfuscation":"yw1XOC8TxIXjaDT"}
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
-                                payLoad = nextLine.Substring("data:".Length).Trim();
 
-                                cc = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
-                                InvokeAssistantReasoningChunkReceived(cc.delta);
+                            case "response.reasoning_text.delta":
+                            case "response.reasoning_summary_text.delta":
+                                var smdelta = JsonSerializer.Deserialize<OutputItemEventDelta>(payLoad!);
+                                InvokeAssistantReasoningChunkReceived(smdelta!.delta);
                                 break;
 
-                            case "event: response.reasoning_summary_part.done":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
-
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-
+                            case "response.reasoning_summary_part.done":
                                 InvokeAssistantReasoningEnded();
                                 break;
 
+                            
 
 
-                            case "event: response.output_item.added":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
+                            case "response.output_item.added":
 
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-                                var tcs = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
+                                var tcs = JsonSerializer.Deserialize<OutputItemEvent>(payLoad!);
                                 if (tcs?.item?.type == "function_call")
                                     InvokeToolCallingStarted(tcs.item.name);
                                 break;
 
-                            case "event: response.function_call_arguments.delta":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
-
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-                                InvokeToolCallingParameterChunkReceived(JsonSerializer.Deserialize<GPTEventBlock>(payLoad).delta);
+                            case "response.function_call_arguments.delta":
+                                InvokeToolCallingParameterChunkReceived(JsonSerializer.Deserialize<OutputItemEventDelta>(payLoad!)!.delta);
                                 break;
 
-                            case "event: response.output_item.done":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
-
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-                                var tce = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
+                            case "response.output_item.done":
+                                var tce = JsonSerializer.Deserialize<OutputItemEvent>(payLoad!);
                                 if (tce?.item?.type == "function_call")
                                     InvokeToolCallingEnded();
                                 break;
 
 
 
-                            case "event: response.content_part.added":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
-
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-                                InvokeAssistantReplyStarted();
+                            case "response.content_part.added":
+                                var prtadded = JsonSerializer.Deserialize<ContentPartEvent>(payLoad!);
+                                if (prtadded!.part.type == "reasoning_text")
+                                    InvokeAssistantReasoningStarted();
+                                else if (prtadded!.part.type == "output_text")
+                                    InvokeAssistantReplyStarted();
+                                else
+                                {
+                                    // unknown
+                                }
                                 break;
 
-                            case "event: response.output_text.delta":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
-
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-                                cc = JsonSerializer.Deserialize<GPTEventBlock>(payLoad);
-                                InvokeAssistantReplyChunkReceived(cc.delta);
+                            case "response.output_text.delta":
+                                var otdelta = JsonSerializer.Deserialize<OutputItemEventDelta>(payLoad!);
+                                InvokeAssistantReplyChunkReceived(otdelta!.delta);
                                 break;
 
-                            case "event: response.content_part.done":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
-
-                                payLoad = nextLine.Substring("data:".Length).Trim();
+                            case "response.content_part.done":
+                                var prtdone = JsonSerializer.Deserialize<ContentPartEvent>(payLoad!);
+                                if (prtdone!.part.type == "reasoning_text")
+                                    InvokeAssistantReasoningEnded();
+                                else if (prtdone!.part.type == "output_text")
+                                    InvokeAssistantReplyEnded();
+                                else
+                                {
+                                    // unknown
+                                }
                                 InvokeAssistantReplyEnded();
                                 break;
 
 
 
-                            case "event: response.completed":
-                                nextLine = await reader.ReadLineAsync();
-                                if (LogStreamingEvents) LogResponseEvent(nextLine);
 
-                                payLoad = nextLine.Substring("data:".Length).Trim();
-                                c = JsonSerializer.Deserialize<GPTEventResponseCompleted>(payLoad);
+
+                            case "response.failed":
+                                // we need to attempt the request again  for three times for example
+                                failedEvent = JsonSerializer.Deserialize<GPTEventResponseCompleted>(payLoad!)!;
+                                break;
+
+
+
+
+
+
+                            case "response.completed":
+                                completedEvent = JsonSerializer.Deserialize<GPTEventResponseCompleted>(payLoad!)!;
 
                                 break;
 
                         }
 
+                       
 
 
                     }
@@ -352,9 +395,16 @@ namespace FantasticAgent
                     if (LogStreamingEvents) LogEventsFinishedFile();
 
 
-                    string reasoning = ReasoningFromThreadResponse([c.response]);  // we don't include thinking in the payload when we send the chat thread again
+                    if (failedEvent != null)
+                    {
+                        InvokeAssistantErrorReceived(failedEvent.response!.Error!);
+                        IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                        return;
+                    }
 
-                    _LastReply = AssistantReplyFromThreadResponse([c.response]);
+                    string reasoning = ReasoningFromThreadResponse(completedEvent!.response);  // we don't include thinking in the payload when we send the chat thread again
+
+                    _LastReply = AssistantReplyFromThreadResponse(completedEvent.response);
 
                     if(!string.IsNullOrEmpty(_LastReply))
                     {
@@ -363,8 +413,11 @@ namespace FantasticAgent
                     }
 
 
-                    foreach (var ot in c.response.OuputMessages)
+                    foreach (var ot in completedEvent.response.OuputMessages)
                     {
+                        if (SupportsReasoningItems == false && ot.MessageType == "reasoning") continue;
+                        ot.MessageId = null;
+                        ot.MessageStatus = null;
                         ActiveRequest.InputMessages.Add(ot);
                     }
 
@@ -372,7 +425,7 @@ namespace FantasticAgent
 
                     string toolname = "";
 
-                    foreach (var ot in c.response.OuputMessages)
+                    foreach (var ot in completedEvent.response.OuputMessages)
                     {
                         if (ot.CallId != null)
                         {
@@ -440,6 +493,7 @@ namespace FantasticAgent
                             prop.WriteTo(writer);
 
                         writer.WriteBoolean("stream", false); // disable streaming explicitly
+                        writer.WriteBoolean("store", false); // disable streaming explicitly
                         writer.WriteEndObject();
                     }
 
@@ -458,7 +512,16 @@ namespace FantasticAgent
                     if (response.IsSuccessStatusCode == false)
                     {
                         var err = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        throw new Exception($"LLM API Error: {response.StatusCode} - {err}");
+
+                        LogResponseError(response.StatusCode, err);
+
+                        var error = JsonSerializer.Deserialize<ErrorEnvelope>(err);
+
+
+                        InvokeAssistantErrorReceived(error!.Error!);
+                        IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                        return;
+
                     }
 
 
@@ -483,8 +546,16 @@ namespace FantasticAgent
                     if (c == null)
                         return;
 
-                    string reasoning = ReasoningFromThreadResponse([c]);
-                    _LastReply = AssistantReplyFromThreadResponse([c]);
+                    if (c.Error != null)
+                    {
+                        InvokeAssistantErrorReceived(c.Error!);
+                        IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                        return;
+                    }
+
+
+                    string reasoning = ReasoningFromThreadResponse(c);
+                    _LastReply = AssistantReplyFromThreadResponse(c);
 
                     if (!string.IsNullOrEmpty(_LastReply))
                     {
@@ -493,8 +564,11 @@ namespace FantasticAgent
                     }
 
 
-                    foreach (var ot in c.OuputMessages)
+                    foreach (var ot in c.OuputMessages!)
                     {
+                        if (SupportsReasoningItems == false && ot.MessageType == "reasoning") continue;
+                        ot.MessageId = null;
+                        ot.MessageStatus = null;
                         ActiveRequest.InputMessages.Add(ot);
                     }
 

@@ -18,6 +18,11 @@ namespace FantasticAgent.Base
 
     public class LLMThreadResponse<TM> where TM : LLMTurnMessage
     {
+
+        [JsonPropertyName("error")]
+        public virtual LLMError? Error { get; set; }
+
+
         [JsonPropertyName("model")]
         public string Model { get; set; }
 

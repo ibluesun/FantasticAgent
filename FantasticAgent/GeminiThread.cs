@@ -216,7 +216,12 @@ namespace FantasticAgent
 
                         if (!LogTurns) LogRequest(ActiveRequest.DebugView);
                         LogResponseError(response.StatusCode, err);
-                        throw new Exception($"LLM API Error: {response.StatusCode} - {err}");
+                        var error = JsonSerializer.Deserialize<ErrorEnvelope>(err);
+
+
+                        InvokeAssistantErrorReceived(error!.Error!);
+                        IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                        return;
                     }
 
 
@@ -243,6 +248,12 @@ namespace FantasticAgent
                     if (c == null)
                         return;
 
+                    if (c.Error != null)
+                    {
+                        InvokeAssistantErrorReceived(c.Error!);
+                        IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                        return;
+                    }
 
 
                     if (c == null || c.Candidates == null || c.Candidates.Count == 0)

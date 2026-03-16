@@ -16,6 +16,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FantasticAgent
 {
@@ -334,9 +335,11 @@ namespace FantasticAgent
 
                         var c = JsonSerializer.Deserialize<OllamaThreadResponse>(line);
 
-                        if (string.IsNullOrEmpty(c.Error) == false)
+                        if (string.IsNullOrEmpty(c.ErrorMessage) == false)
                         {
-                            throw new LLMException(c.Error);
+                            InvokeAssistantErrorReceived(c.Error!);
+                            IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                            return;
                         }
 
                         // Optional: fire event, but do not touch UI here
@@ -456,7 +459,12 @@ namespace FantasticAgent
                         if (!LogTurns) LogRequest(ActiveRequest.DebugView);
                         LogResponseError(response.StatusCode, err);
 
-                        throw new Exception($"LLM API Error: {response.StatusCode} - {err}");
+                        var error = JsonSerializer.Deserialize<ErrorEnvelope>(err);
+
+
+                        InvokeAssistantErrorReceived(error!.Error!);
+                        IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                        return;
                     }
 
 
@@ -481,6 +489,13 @@ namespace FantasticAgent
 
                     if (c == null)
                         return;
+
+                    if (c.Error != null)
+                    {
+                        InvokeAssistantErrorReceived(c.Error!);
+                        IsToolReplyPending = false;  // false for now .. but we can make a mechanism to call again with attempts later
+                        return;
+                    }
 
                     string thinking = ThinkingFromThreadResponse([c]);
                     _LastReply = AssistantReplyFromThreadResponse([c]);

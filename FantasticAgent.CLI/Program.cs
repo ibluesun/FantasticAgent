@@ -130,9 +130,9 @@ namespace FantasticAgent.CLI
         {
             var secretKey = Environment.GetEnvironmentVariable("GroqSecret");
 
-            //GroqThread gpt = new GroqThread(secretKey, "openai/gpt-oss-120b", "You are a helpful assistant.");
+            GroqThread gpt = new GroqThread(secretKey, "openai/gpt-oss-120b", "You are a helpful assistant.");
             //GroqThread gpt = new GroqThread(secretKey, "llama-3.3-70b-versatile", "You are a helpful assistant.");
-            GroqThread gpt = new GroqThread(secretKey, "moonshotai/kimi-k2-instruct-0905", "You are a helpful assistant.");
+            //GroqThread gpt = new GroqThread(secretKey, "moonshotai/kimi-k2-instruct-0905", "You are a helpful assistant.");
 
             //gpt.ActiveRequest.Reasoning = new GPTReasoning() { Effort = ReasoningEffortLevel.Medium,  Summary = ReasoningSummary.Auto };
 
@@ -140,7 +140,31 @@ namespace FantasticAgent.CLI
 
             ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetCityCoordinates")!);
             ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetWeatherAtCoordinates")!);
-            ee.MainThread.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
+            ee.MainThread.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch")!);
+
+            return ee;
+
+        }
+
+        static ILLMEvaluator GetHFEvaluator()
+        {
+            var secretKey = Environment.GetEnvironmentVariable("HFLLMSecret");
+
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "openai/gpt-oss-120b", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "llama-3.3-70b-versatile", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "moonshotai/Kimi-K2-Instruct-0905", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "Qwen/Qwen3.5-9B:together", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "MiniMaxAI/MiniMax-M2.5:novita", "You are a helpful assistant.");
+            HuggingFaceThread hf = new HuggingFaceThread(secretKey, "XiaomiMiMo/MiMo-V2-Flash:novita", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "tencent/Penguin-VL-2B", "You are a helpful assistant.");
+
+            //hf.ActiveRequest.Reasoning = new GPTReasoning() {   Effort = ReasoningEffortLevel.Medium,  Summary = ReasoningSummary.Auto };
+
+            var ee = new LLMEvaluator<GPTThreadRequest, GPTThreadResponse, GPTTurnMessage>("HuggingFace", hf, term);
+
+            ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetCityCoordinates")!);
+            ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetWeatherAtCoordinates")!);
+            ee.MainThread.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch")!);
 
             return ee;
 
@@ -153,7 +177,7 @@ namespace FantasticAgent.CLI
             DotNetEnv.Env.Load();
 
 
-            var evl = GetGroqEvaluator();
+            var evl = GetHFEvaluator();
             evl.LogStreamingEvents = true;
             evl.LogTurns = true;
 

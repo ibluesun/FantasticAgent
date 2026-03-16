@@ -44,6 +44,11 @@ namespace FantasticAgent.Base
         public required string Message { get; set; }
     }
 
+    public class LLMAssistantErrorEventArgs : EventArgs
+    {
+        public required LLMError Error { get; set; }
+    }
+
     public class LLMUserEventArgs<TM> : EventArgs where TM : LLMTurnMessage
     {
         public required TM UserMessage { get; set; }

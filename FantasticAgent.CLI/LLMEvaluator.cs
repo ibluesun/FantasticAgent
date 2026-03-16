@@ -83,7 +83,7 @@ namespace FantasticAgent
 
         private void _MainThread_ToolRequestStarted(object? sender, LLMAssistantEventArgs e)
         {
-            _terminal.ForegroundColor = TerminalColor.Red;
+            _terminal.ForegroundColor = TerminalColor.Magenta;
             _terminal.Write($"{e.Message}");
         }
 
@@ -146,6 +146,8 @@ namespace FantasticAgent
             _MainThread.AssistantToolRequestChunkReceived += _MainThread_ToolRequestChunkReceived;
             _MainThread.AssistantToolRequestEnded += _MainThread_ToolRequestEnded;
 
+            _MainThread.AssistantErrorReceived += _MainThread_AssistantErrorReceived;
+
             _terminal.ForegroundColor = TerminalColor.White;
             _terminal.Prompt($"{PromptText}> ");
 
@@ -184,7 +186,11 @@ namespace FantasticAgent
 
         }
 
-
+        private void _MainThread_AssistantErrorReceived(object? sender, LLMAssistantErrorEventArgs e)
+        {
+            _terminal.ForegroundColor = TerminalColor.Red;
+            _terminal.Write($"{e.Error.Message}");
+        }
 
         private async Task ProcessReplies()
         {
@@ -198,6 +204,7 @@ namespace FantasticAgent
 
         public async Task ConsoleRun()
         {
+            _MainThread.AssistantErrorReceived += _MainThread_AssistantErrorReceived;
 
             _terminal.ForegroundColor = TerminalColor.White;
             _terminal.Prompt($"{PromptText}> ");
@@ -247,7 +254,7 @@ namespace FantasticAgent
 
                 
                 _terminal.WriteLine();
-                _terminal.Write(_MainThread.LastTurnMessage.MessageTextContent);
+                _terminal.Write(_MainThread.LastReply);
 
                 _terminal.WriteLine();
                 _terminal.WriteLine();

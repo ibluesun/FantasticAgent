@@ -11,7 +11,7 @@ namespace FantasticAgent.Base
     public class ErrorEnvelope
     {
         [JsonPropertyName("error")]
-        public ApiError? Error { get; init; }
+        public LLMError? Error { get; init; }
         public override string ToString()
         {
             return JsonSerializer.Serialize(this, this.GetType());
@@ -19,16 +19,16 @@ namespace FantasticAgent.Base
     }
 
 
-    public class ApiError
+    public class LLMError
     {
+        [JsonPropertyName("code")]
+        public string Code { get; init; } = "";
+
         [JsonPropertyName("message")]
         public string Message { get; init; } = "";
 
         [JsonPropertyName("type")]
         public string Type { get; init; } = "";
-
-        [JsonPropertyName("code")]
-        public string Code { get; init; } = "";
 
         public override string ToString()
         {

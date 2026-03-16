@@ -44,6 +44,11 @@ namespace FantasticAgent.Base
         public event EventHandler<LLMAssistantEventArgs> AssistantToolRequestEnded;
 
 
+        public event EventHandler<LLMAssistantErrorEventArgs> AssistantErrorReceived;
+
+
+
+
         public event EventHandler<LLMToolEventArgs> HostToolCalled;
         public event EventHandler<LLMToolEventArgs> HostToolReplied;
 
@@ -73,6 +78,11 @@ namespace FantasticAgent.Base
         public bool IsReplying { get; set; } = false;
         public bool IsToolCalling { get; set; } = false;
 
+
+        public void InvokeAssistantErrorReceived(LLMError error)
+        {
+            AssistantErrorReceived?.Invoke(this, new LLMAssistantErrorEventArgs { Error = error });
+        }
 
         public void InvokeAssistantReasoningStarted()
         {
