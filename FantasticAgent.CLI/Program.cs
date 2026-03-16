@@ -126,13 +126,34 @@ namespace FantasticAgent.CLI
         }
 
 
+        static ILLMEvaluator GetGroqEvaluator()
+        {
+            var secretKey = Environment.GetEnvironmentVariable("GroqSecret");
+
+            //GroqThread gpt = new GroqThread(secretKey, "openai/gpt-oss-120b", "You are a helpful assistant.");
+            //GroqThread gpt = new GroqThread(secretKey, "llama-3.3-70b-versatile", "You are a helpful assistant.");
+            GroqThread gpt = new GroqThread(secretKey, "moonshotai/kimi-k2-instruct-0905", "You are a helpful assistant.");
+
+            //gpt.ActiveRequest.Reasoning = new GPTReasoning() { Effort = ReasoningEffortLevel.Medium,  Summary = ReasoningSummary.Auto };
+
+            var ee = new LLMEvaluator<GPTThreadRequest, GPTThreadResponse, GPTTurnMessage>("Groq", gpt, term);
+
+            ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetCityCoordinates")!);
+            ee.MainThread.DeclareFunctionTool(typeof(WeatherTools).GetMethod("GetWeatherAtCoordinates")!);
+            ee.MainThread.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
+
+            return ee;
+
+        }
+
+
         static void Main(string[] args)
         {
 
             DotNetEnv.Env.Load();
 
 
-            var evl = GetClaudeEvaluator();
+            var evl = GetGroqEvaluator();
             evl.LogStreamingEvents = true;
             evl.LogTurns = true;
 

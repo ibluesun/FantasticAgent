@@ -39,7 +39,13 @@ namespace FantasticAgent
 
         }
 
-
+        // Protected constructor for subclasses — accepts a custom URL
+        protected GPTThread(string url, string secretKey, string gptModel, string systemRole)
+            : base(url, gptModel, systemRole)
+        {
+            LLMHttpThreadClient.DefaultRequestHeaders.Add("Accept", "application/json");
+            LLMHttpThreadClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {secretKey}");
+        }
 
 
         public override string ProviderName => "ChatGPT";
@@ -226,11 +232,19 @@ namespace FantasticAgent
                     {
                         if (LogStreamingEvents) LogResponseEvent(line);
 
+                        // ✅ Detect raw error envelope (Groq sends this before any real events)
+                        if (line.StartsWith("{\"error\""))
+                        {
+                            var error = JsonSerializer.Deserialize<ErrorEnvelope>(line);
+                            throw new LLMException(error.ToString());
+                        }
+
                         GPTEventBlock cc;
                         string nextLine;
                         string payLoad;
                         switch (line)
                         {
+
                             case "event: response.reasoning_summary_part.added":
                                 nextLine = await reader.ReadLineAsync();
                                 if (LogStreamingEvents) LogResponseEvent(nextLine);

@@ -142,7 +142,7 @@ namespace FantasticAgent.WPF
         {
             if (!string.IsNullOrEmpty(GPTSecret))
             {
-                gpt = new GPTThread(GPTSecret, "gpt-5-nano", "You are a helpful assistant.");
+                gpt = new GPTThread(GPTSecret, "gpt-5.4", "You are a helpful assistant.");
                 gpt.ActiveRequest.Reasoning = new GPTReasoning() { Summary = ReasoningSummary.Auto };
                 gpt.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
 
