@@ -365,8 +365,8 @@ namespace FantasticAgent
                         return;
                     }
 
-                    LastTurnConsumption.InputTokens = c.Usage.InputTokens;
-                    LastTurnConsumption.ModelOutputTokens = c.Usage.OuputTokens;
+                    LastTurnInformation.InputTokens = c.Usage.InputTokens;
+                    LastTurnInformation.ModelOutputTokens = c.Usage.OuputTokens;
 
 
                     ActiveRequest.AssistantMessages(c.OuputMessages!);
@@ -391,7 +391,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(fc);
-                                    LastTurnConsumption.ToolCalls++;
+                                    LastTurnInformation.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {
@@ -504,8 +504,8 @@ namespace FantasticAgent
                         return;
                     }
 
-                    LastTurnConsumption.InputTokens = c.Usage.InputTokens;
-                    LastTurnConsumption.ModelOutputTokens = c.Usage.OuputTokens;
+                    LastTurnInformation.InputTokens = c.Usage.InputTokens;
+                    LastTurnInformation.ModelOutputTokens = c.Usage.OuputTokens;
 
 
                     ActiveRequest.AssistantMessages(c.OuputMessages!);
@@ -525,7 +525,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(fc);
-                                    LastTurnConsumption.ToolCalls++;
+                                    LastTurnInformation.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {
@@ -569,6 +569,30 @@ namespace FantasticAgent
             }).ConfigureAwait(false);
 
         }
+
+
+        public override string[] UserMessages
+        {
+            get
+            {
+                List<string> messages = new List<string>();
+                foreach (var ms in ActiveRequest.InputMessages)
+                {
+                    if (ms.Role == "user" && ms.Contents != null)
+                    {
+                        foreach (var c in ms.Contents)
+                        {
+                            if (c.MessageContentType == "text")
+                            {
+                                if (c.Text != null) messages.Add(c.Text);
+                            }
+                        }
+                    }
+                }
+                return messages.ToArray();
+            }
+        }
+
 
     }
 

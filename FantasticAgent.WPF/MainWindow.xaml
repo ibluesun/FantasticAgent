@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FantasticAgent.WPF"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="1600"
+        Title="MainWindow" Width="1800" Height="940"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="CanResize"
@@ -142,6 +142,7 @@
                     <ColumnDefinition/>
                     <ColumnDefinition/>
                     <ColumnDefinition/>
+                    <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
 
                 <local:LLMThreadUserControl Grid.Column="0" x:Name="OllamaThreadUC" Title="Ollama" IconBrush="Red" Margin="0,0,2,0"/>
@@ -151,6 +152,8 @@
                 <local:LLMThreadUserControl Grid.Column="2" x:Name="GptThreadUC" Title="ChatGPT" IconBrush="Blue" Margin="2,0,0,0"/>
 
                 <local:LLMThreadUserControl Grid.Column="3" x:Name="GeminiThreadUC" Title="Gemini" IconBrush="Blue" Margin="2,0,0,0"/>
+                
+                <local:LLMThreadUserControl Grid.Column="4" x:Name="HFThreadUC" Title="HuggingFace" IconBrush="Blue" Margin="2,0,0,0"/>
 
             </Grid>
 

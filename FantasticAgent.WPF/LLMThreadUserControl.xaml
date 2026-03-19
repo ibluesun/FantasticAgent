@@ -170,6 +170,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -223,7 +224,6 @@
 
                     </Grid>
                 </Border>
-                
                 <Grid>
                     <ProgressBar VerticalAlignment="Bottom"
                                  Height="2"
@@ -246,8 +246,60 @@
                     </ProgressBar>
                 </Grid>
 
-                <ScrollViewer x:Name="TerminalScroll" 
-                              Grid.Row="1" 
+                <Border Grid.Row="1" Background="#121212" BorderBrush="#252525" BorderThickness="0,0,0,1" Padding="2,10">
+                    
+                        <TextBlock Margin="10" Text="{Binding CurrentVisibleUserMessage, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           Foreground="Yellow" FontSize="12" FontFamily="Cascadia Mono" HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"  />
+                    
+                </Border>
+
+                <ScrollViewer x:Name="TerminalScroll" Grid.Row="2" Margin="6" ScrollChanged="TerminalScroll_ScrollChanged">
+                    <ItemsControl ItemsSource="{Binding Turns, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,20">
+
+                                    <TextBlock x:Name="UserMessageBlock" 
+                                               Text="{Binding UserMessage}" 
+                                               Foreground="Yellow"
+                                               
+                                               FontFamily="Cascadia Mono"
+                                               FontSize="12"
+                                               Margin="0,0,0,12"
+                                               TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <Trigger Property="Text" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </Trigger>
+                                                    <Trigger Property="Text" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+
+                                    <Border x:Name="UserMessageBorder" Background="#151515" BorderBrush="#333" BorderThickness="1" CornerRadius="6" Padding="8,10">
+                                        <TextBlock x:Name="TurnOutputBox" 
+                                            Tag="{Binding TurnIndex}" 
+                                            TextWrapping="Wrap" 
+                                            FontFamily="Cascadia Mono" 
+                                            FontSize="13" 
+                                            Foreground="#66FF66" 
+                                            LineHeight="18"/>
+                                    </Border>
+                                    
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!--<ScrollViewer Visibility="Collapsed"
+                              Grid.Row="2" 
                               VerticalScrollBarVisibility="Auto"
                               Margin="6">
                     <TextBlock x:Name="OutputBox"
@@ -257,9 +309,9 @@
                                Foreground="#66FF66"
                                LineHeight="18"
                                />
-                </ScrollViewer>
+                </ScrollViewer>-->
 
-                <Border Grid.Row="2" 
+                <Border Grid.Row="3" 
                     Background="#1A1A1A" 
                     BorderBrush="#333" 
                     BorderThickness="0,1,0,0" 

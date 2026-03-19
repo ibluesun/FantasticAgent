@@ -5,6 +5,7 @@ using FantasticAgent.Base;
 using FantasticAgent.Gemini;
 using FantasticAgent.Gemini.Tools;
 using FantasticAgent.Tools;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -262,9 +263,9 @@ namespace FantasticAgent
                         return;
                     }
 
-                    LastTurnConsumption.InputTokens = c.Usage.PromptTokenCount;
-                    LastTurnConsumption.ModelThinkingTokens = c.Usage.ThoughtsTokenCount;
-                    LastTurnConsumption.ModelOutputTokens = c.Usage.CandidatesTokenCount;
+                    LastTurnInformation.InputTokens = c.Usage.PromptTokenCount;
+                    LastTurnInformation.ModelThinkingTokens = c.Usage.ThoughtsTokenCount;
+                    LastTurnInformation.ModelOutputTokens = c.Usage.CandidatesTokenCount;
 
 
                     IsToolReplyPending = false;
@@ -281,7 +282,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(prt.FunctionCall);
-                                    LastTurnConsumption.ToolCalls++;
+                                    LastTurnInformation.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {
@@ -547,9 +548,9 @@ namespace FantasticAgent
                                     c.Done = candy.FinishReason == "STOP";
                                     c.FinishReason = candy.FinishReason;
 
-                                    LastTurnConsumption.InputTokens = c.Usage.PromptTokenCount;
-                                    LastTurnConsumption.ModelThinkingTokens = c.Usage.ThoughtsTokenCount;
-                                    LastTurnConsumption.ModelOutputTokens = c.Usage.CandidatesTokenCount;
+                                    LastTurnInformation.InputTokens = c.Usage.PromptTokenCount;
+                                    LastTurnInformation.ModelThinkingTokens = c.Usage.ThoughtsTokenCount;
+                                    LastTurnInformation.ModelOutputTokens = c.Usage.CandidatesTokenCount;
 
 
                                 }
@@ -589,7 +590,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(prt.FunctionCall);
-                                    LastTurnConsumption.ToolCalls++;
+                                    LastTurnInformation.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {
@@ -637,6 +638,30 @@ namespace FantasticAgent
             }).ConfigureAwait(false);
 
 
+        }
+
+
+
+        public override string[] UserMessages
+        {
+            get
+            {
+                List<string> messages = new List<string>();
+                foreach (var ms in ActiveRequest.Contents)
+                {
+                    if (ms.Role == "user" && ms.Parts != null)
+                    {
+                        foreach (var c in ms.Parts)
+                        {
+
+
+                            if (c.Text != null) messages.Add(c.Text);
+
+                        }
+                    }
+                }
+                return messages.ToArray();
+            }
         }
 
     }

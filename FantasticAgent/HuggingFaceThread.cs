@@ -13,6 +13,7 @@ namespace FantasticAgent
 
         }
 
+        public override string ProviderName => "HuggingFace";
 
         protected override bool SupportsReasoningItems => false;
 

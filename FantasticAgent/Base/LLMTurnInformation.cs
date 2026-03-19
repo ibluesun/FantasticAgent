@@ -1,13 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace FantasticAgent.Base
 {
-    public class LLMTurnConsumption 
+    public class LLMTurnInformation 
     {
 
         public int TurnIndex { get; init; }
+
+
+        public string UserMessage { get; set; }
+
+        public string AiResponse { get; set; }
+
+        public bool IsToolReply { get; set; } = false;
+
 
         public int InputTokens { get; set; }
 

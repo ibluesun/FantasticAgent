@@ -16,7 +16,7 @@ namespace FantasticAgent.Base
 {
 
 
-    public class LLMThreadRequest<TM> where TM : LLMTurnMessage, new()
+    public abstract class LLMThreadRequest<TM> where TM : LLMTurnMessage, new()
     {
 
 
@@ -77,6 +77,8 @@ namespace FantasticAgent.Base
         {
             throw new NotImplementedException();
         }
+
+
 
 
 

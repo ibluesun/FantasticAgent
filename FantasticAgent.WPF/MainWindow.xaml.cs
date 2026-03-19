@@ -26,12 +26,15 @@ namespace FantasticAgent.WPF
         static string? GPTSecret = Environment.GetEnvironmentVariable("GPTSecret");
         static string? ClaudeSecret = Environment.GetEnvironmentVariable("ClaudeSecret");
         static string? GeminiSecret = Environment.GetEnvironmentVariable("GeminiApi");
+        static string? HFSecret = Environment.GetEnvironmentVariable("HFLLMSecret");
 
 
         ClaudeThread claude;
         GPTThread gpt;
         OllamaThread ollama;
         GeminiThread gemini;
+
+        HuggingFaceThread hf;
 
 
         string OllamaModel = "qwen3.5";
@@ -166,9 +169,14 @@ namespace FantasticAgent.WPF
         }
         void PrepareGemini()
         {
+
+            string litemodel = "gemini-3.1-flash-lite-preview";
+            string model = "gemini-3-flash-preview";
+            string promodel = "gemini-3.1-pro-preview";
+
             if (!string.IsNullOrEmpty(GeminiSecret))
             {
-                gemini = new GeminiThread(GeminiSecret, "gemini-3.1-pro-preview", SystemPrompt);
+                gemini = new GeminiThread(GeminiSecret, model, SystemPrompt);
 
                 GeminiGenerationConfiguration conf = new GeminiGenerationConfiguration();
                 conf.ThinkingConfig = new GeminiThinkingConfiguration { IncludeThoughts = true, ThinkingLevel = ReasoningEffortLevel.Max };
@@ -191,6 +199,46 @@ namespace FantasticAgent.WPF
             }
 
         }
+
+
+        void PrepareHF()
+        {
+
+
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "openai/gpt-oss-120b", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "llama-3.3-70b-versatile", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "moonshotai/Kimi-K2-Instruct-0905", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "Qwen/Qwen3.5-9B:together", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "MiniMaxAI/MiniMax-M2.5:novita", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "XiaomiMiMo/MiMo-V2-Flash:novita", "You are a helpful assistant.");
+            //HuggingFaceThread hf = new HuggingFaceThread(secretKey, "tencent/Penguin-VL-2B", "You are a helpful assistant.");
+
+            //hf.ActiveRequest.Reasoning = new GPTReasoning() {   Effort = ReasoningEffortLevel.Medium,  Summary = ReasoningSummary.Auto };
+
+
+
+            if (!string.IsNullOrEmpty(HFSecret))
+            {
+                HuggingFaceThread hf = new HuggingFaceThread(HFSecret, "moonshotai/Kimi-K2.5:together", SystemPrompt);
+
+                hf.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
+
+                hf.LogTurns = true;
+                hf.LogStreamingEvents = true;
+
+                HFThreadUC.ActiveLLMThread = hf;
+
+
+            }
+            else
+            {
+                HFThreadUC.Warning("[HFSecret] Environment Variable is not Present.");
+
+            }
+
+        }
+
+
 
         void PrepareOllama()
         {
@@ -223,6 +271,7 @@ namespace FantasticAgent.WPF
             PrepareGPT();
             PrepareOllama();
             PrepareGemini();
+            PrepareHF();
 
         }
 
@@ -236,6 +285,7 @@ namespace FantasticAgent.WPF
             ClaudeThreadUC.ProcessUserMessage(message);
             GptThreadUC.ProcessUserMessage(message);
             GeminiThreadUC.ProcessUserMessage(message);
+            HFThreadUC.ProcessUserMessage(message);
 
 
 

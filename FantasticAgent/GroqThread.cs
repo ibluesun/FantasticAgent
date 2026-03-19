@@ -11,5 +11,9 @@ namespace FantasticAgent
         {
 
         }
+
+
+        public override string ProviderName => "Groq";
+
     }
 }

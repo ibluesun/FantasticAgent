@@ -183,7 +183,14 @@ namespace FantasticAgent.WPF
             }
         }
 
+        public static readonly DependencyProperty CurrentVisibleUserMessageProperty =
+            DependencyProperty.Register("CurrentVisibleUserMessage", typeof(string), typeof(LLMThreadUserControl), new PropertyMetadata(string.Empty));
 
+        public string CurrentVisibleUserMessage
+        {
+            get { return (string)GetValue(CurrentVisibleUserMessageProperty); }
+            set { SetValue(CurrentVisibleUserMessageProperty, value); }
+        }
 
         private ILLMThread _ActiveLLMThread;
 
@@ -230,6 +237,12 @@ namespace FantasticAgent.WPF
                     this.IncreaseCallsCount();
 
                 };
+
+                //_ActiveLLMThread.UserMessageQueued += (s, e) =>
+                //{
+                //    this.UpdateLayout();
+                //    UserInput(e.UserMessage);
+                //};
             }
         }
 
@@ -240,7 +253,6 @@ namespace FantasticAgent.WPF
             if (_ActiveLLMThread != null)
             {
                 this.IsBusy = true;
-                this.UserInput(text);
                 _ActiveLLMThread.UserMessage(text);
 
                 await _ActiveLLMThread.SendToLLMThread();
@@ -257,11 +269,64 @@ namespace FantasticAgent.WPF
                 TotalOutputTokens = _ActiveLLMThread.TotalOutputTokens;
                 TotalTurns = _ActiveLLMThread.TotalTurns;
 
+                //CurrentVisibleUserMessage = _ActiveLLMThread.UserMessages.Last();
+
 
                 
             }
         }
 
+        // Standard WPF Helper to find a child element
+        private T FindVisualChild<T>(DependencyObject obj) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(obj, i);
+                if (child != null && child is T) return (T)child;
+                T childOfChild = FindVisualChild<T>(child);
+                if (childOfChild != null) return childOfChild;
+            }
+            return null;
+        }
+
+        private T FindVisualChild<T>(DependencyObject obj, string name) where T : FrameworkElement
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(obj, i);
+                if (child != null && child is T element && element.Name == name)
+                {
+                    return (T)child;
+                }
+
+                T childOfChild = FindVisualChild<T>(child, name);
+                if (childOfChild != null) return childOfChild;
+            }
+            return null;
+        }
+
+        TextBlock OutputBox
+        {
+            get
+            {
+                if (Turns == null || Turns.Count == 0) return null;
+
+                var itemsControl = TerminalScroll.Content as ItemsControl;
+                if (itemsControl == null) return null;
+
+                var latestTurn = Turns.Last();
+
+                // FIX: Force WPF to generate the container immediately 
+                // if it doesn't exist yet (important for new turns)
+                if (itemsControl.ItemContainerGenerator.ContainerFromItem(latestTurn) == null)
+                {
+                    itemsControl.UpdateLayout();
+                }
+
+                var container = itemsControl.ItemContainerGenerator.ContainerFromItem(latestTurn) as ContentPresenter;
+                return FindVisualChild<TextBlock>(container, "TurnOutputBox");
+            }
+        }
 
 
         Run DefaultRun => new Run()
@@ -275,6 +340,7 @@ namespace FantasticAgent.WPF
         {
             Foreground = Brushes.Yellow,
             FontWeight = FontWeights.Normal
+            
         };
 
 
@@ -425,6 +491,52 @@ namespace FantasticAgent.WPF
         }
 
 
-        
+
+        // In your UserControl or ViewModel:
+        public ObservableCollection<LLMTurnInformation> Turns => _ActiveLLMThread.TurnsInformation;
+
+        private void TerminalScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            var itemsControl = TerminalScroll.Content as ItemsControl;
+            if (itemsControl == null || itemsControl.Items.Count == 0) return;
+
+            string bestMessageForHeader = "";
+
+            for (int i = 0; i < itemsControl.Items.Count; i++)
+            {
+                var container = itemsControl.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
+                if (container == null) continue;
+
+                var turn = itemsControl.Items[i] as LLMTurnInformation;
+
+                // If this turn has a message, keep track of it as the "latest known" message
+                if (!string.IsNullOrEmpty(turn?.UserMessage))
+                {
+                    bestMessageForHeader = turn.UserMessage;
+                }
+
+                var transform = container.TransformToAncestor(TerminalScroll);
+                var topBound = transform.Transform(new Point(0, 0)).Y;
+
+                if (topBound <= 10)
+                {
+                    // Update the header with the best message found UP TO this point
+                    CurrentVisibleUserMessage = bestMessageForHeader;
+
+                    // Hide the user block in the list if it's currently at the top
+                    var userMsgBlock = FindVisualChild<TextBlock>(container, "UserMessageBlock");
+                    if (userMsgBlock != null) userMsgBlock.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    // Only show it if it wasn't already collapsed by our XAML trigger (empty text)
+                    var userMsgBlock = FindVisualChild<TextBlock>(container, "UserMessageBlock");
+                    if (userMsgBlock != null && !string.IsNullOrEmpty(turn?.UserMessage))
+                    {
+                        userMsgBlock.Visibility = Visibility.Visible;
+                    }
+                }
+            }
+        }
     }
 }

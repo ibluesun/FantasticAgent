@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text;
 
 namespace FantasticAgent.Base
@@ -16,6 +17,10 @@ namespace FantasticAgent.Base
 
         public string Title { get; }
         bool IsToolReplyPending { get; }
+
+
+        public event EventHandler<LLMUserEventArgs> UserMessageQueued;
+        public event EventHandler<LLMUserEventArgs> UserMessageSent;
 
         public event EventHandler<LLMAssistantEventArgs> AssistantReasoningStarted;
         public event EventHandler<LLMAssistantEventArgs> AssistantReasoningChunkReceived;
@@ -46,5 +51,11 @@ namespace FantasticAgent.Base
         int TotalToolCalls { get; }
 
         int TotalTurns { get; }
+
+
+        string[] UserMessages { get; }
+
+
+        ObservableCollection<LLMTurnInformation> TurnsInformation { get; }
     }
 }

@@ -402,9 +402,9 @@ namespace FantasticAgent
                         return;
                     }
 
-                    LastTurnConsumption.InputTokens = completedEvent.response.Usage.InputTokens;
-                    LastTurnConsumption.ModelOutputTokens = completedEvent.response.Usage.OuputTokens - completedEvent.response.Usage.OutputTokenDetails.reasoning_tokens;
-                    LastTurnConsumption.ModelThinkingTokens = completedEvent.response.Usage.OutputTokenDetails.reasoning_tokens;
+                    LastTurnInformation.InputTokens = completedEvent.response.Usage.InputTokens;
+                    LastTurnInformation.ModelOutputTokens = completedEvent.response.Usage.OuputTokens - completedEvent.response.Usage.OutputTokenDetails.reasoning_tokens;
+                    LastTurnInformation.ModelThinkingTokens = completedEvent.response.Usage.OutputTokenDetails.reasoning_tokens;
 
                     string reasoning = ReasoningFromThreadResponse(completedEvent!.response);  // we don't include thinking in the payload when we send the chat thread again
 
@@ -437,7 +437,7 @@ namespace FantasticAgent
                             try
                             {
                                 result = ExecuteFunctionCall(ot);
-                                LastTurnConsumption.ToolCalls++;
+                                LastTurnInformation.ToolCalls++;
                             }
                             catch (Exception e)
                             {
@@ -558,9 +558,9 @@ namespace FantasticAgent
                         return;
                     }
 
-                    LastTurnConsumption.InputTokens = c.Usage.InputTokens;
-                    LastTurnConsumption.ModelOutputTokens = c.Usage.OuputTokens - c.Usage.OutputTokenDetails.reasoning_tokens;
-                    LastTurnConsumption.ModelThinkingTokens = c.Usage.OutputTokenDetails.reasoning_tokens;
+                    LastTurnInformation.InputTokens = c.Usage.InputTokens;
+                    LastTurnInformation.ModelOutputTokens = c.Usage.OuputTokens - c.Usage.OutputTokenDetails.reasoning_tokens;
+                    LastTurnInformation.ModelThinkingTokens = c.Usage.OutputTokenDetails.reasoning_tokens;
 
 
                     string reasoning = ReasoningFromThreadResponse(c);
@@ -592,7 +592,7 @@ namespace FantasticAgent
                             {
                                 result = ExecuteFunctionCall(ot);
 
-                                LastTurnConsumption.ToolCalls++;
+                                LastTurnInformation.ToolCalls++;
                             }
                             catch (Exception e)
                             {
@@ -625,6 +625,31 @@ namespace FantasticAgent
             }).ConfigureAwait(false);
 
         }
+
+
+
+        public override string[] UserMessages
+        {
+            get
+            {
+                List<string> messages = new List<string>();
+                foreach (var ms in ActiveRequest.InputMessages)
+                {
+                    if (ms.Role == "user" && ms.Contents != null)
+                    {
+                        foreach (var c in ms.Contents)
+                        {
+                            if (c.MessageContentType == "input_text")
+                            {
+                                if (c.Text != null) messages.Add(c.Text);
+                            }
+                        }
+                    }
+                }
+                return messages.ToArray();
+            }
+        }
+
 
     }
 

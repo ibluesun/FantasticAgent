@@ -34,7 +34,7 @@ await ollama.SendMessageAsync("Search for the latest AI news");
 
 ## Demo
 
-![WPF Demo Application](FantasticAgentFirstShot.png)
+![WPF Demo Application](FantasticAgent2ndShot.png)
 
 
 The WPF demo shows three LLM providers (Ollama, Claude, ChatGPT) responding to the same Arabic query in parallel, each making tool calls to BraveSearch and streaming results independently.
@@ -45,7 +45,8 @@ The WPF demo shows three LLM providers (Ollama, Claude, ChatGPT) responding to t
 - [x] Native LLM support with tool calling  
 - [x] Multi-provider parallel execution  
 - [x] Event-driven streaming  
-- [ ] NuGet package (planned)  
+- [x] Usage Monitoring
+- [x] NuGet package at https://www.nuget.org/packages/SymbolicAlgebra/
 - [ ] Full agent orchestration (figuring it out)
 
 ## Supported Providers
@@ -53,6 +54,9 @@ The WPF demo shows three LLM providers (Ollama, Claude, ChatGPT) responding to t
 - Ollama
 - Claude (Anthropic)
 - OpenAI/ChatGPT
+- Gemini
+- HugginFace, and Groq (as a direct inheritance from OpenAI responses api)
+
 
 
 ## License

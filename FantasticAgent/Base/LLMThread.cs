@@ -4,6 +4,7 @@ using FantasticAgent.Tools;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -27,7 +28,8 @@ namespace FantasticAgent.Base
         protected readonly HttpClient LLMHttpThreadClient;
         protected readonly Uri ServerUri;
 
-        public event EventHandler<LLMUserEventArgs<TM>> UserMessageQueued;
+        public event EventHandler<LLMUserEventArgs> UserMessageQueued;
+        public event EventHandler<LLMUserEventArgs> UserMessageSent;
 
 
         public event EventHandler<LLMAssistantEventArgs> AssistantReasoningStarted;
@@ -414,9 +416,9 @@ namespace FantasticAgent.Base
 
         protected int TurnId = 0;
 
-        public LLMTurnConsumption? LastTurnConsumption { get; private set; }
+        public LLMTurnInformation? LastTurnInformation { get; private set; }
 
-        public List<LLMTurnConsumption> TurnsConsumptions { get; private set; } = new List<LLMTurnConsumption>();
+        public ObservableCollection<LLMTurnInformation> TurnsInformation { get; private set; } = new ObservableCollection<LLMTurnInformation>();
 
         public virtual async Task SendToLLMThread()
         {
@@ -426,12 +428,21 @@ namespace FantasticAgent.Base
             OnGoingCall = true;
 
             TurnId++;
-            LastTurnConsumption = new LLMTurnConsumption { TurnIndex = TurnId };
+
+            if (IsToolReplyPending)
+                LastTurnInformation = new LLMTurnInformation { TurnIndex = TurnId, UserMessage = string.Empty, IsToolReply = true };
+            else
+                LastTurnInformation = new LLMTurnInformation { TurnIndex = TurnId, UserMessage = this.UserMessages.Last() };
+
+            TurnsInformation.Add(LastTurnInformation);
+
+            UserMessageQueued?.Invoke(this, new LLMUserEventArgs { UserMessage = this.UserMessages.Last() });
 
             await OnStreamSend();
 
-            if (LastTurnConsumption != null)
-                TurnsConsumptions.Add(LastTurnConsumption);
+
+            LastTurnInformation.AiResponse = _LastReply;
+            
 
         }
 
@@ -447,14 +458,19 @@ namespace FantasticAgent.Base
                 return;
 
             OnGoingCall = true;
-            LastTurnConsumption = new LLMTurnConsumption { TurnIndex = TurnId };
 
             TurnId++;
+            if (IsToolReplyPending)
+                LastTurnInformation = new LLMTurnInformation { TurnIndex = TurnId, UserMessage = string.Empty, IsToolReply = true };
+            else
+                LastTurnInformation = new LLMTurnInformation { TurnIndex = TurnId, UserMessage = this.UserMessages.Last() };
+            TurnsInformation.Add(LastTurnInformation);
+
+            UserMessageQueued?.Invoke(this, new LLMUserEventArgs { UserMessage = this.UserMessages.Last() });
 
 
             await OnNoStreamSend();
-            if (LastTurnConsumption != null)
-                TurnsConsumptions.Add(LastTurnConsumption);
+            LastTurnInformation.AiResponse = _LastReply;
 
         }
 
@@ -466,16 +482,23 @@ namespace FantasticAgent.Base
 
 
 
-        public int TotalInputTokens => TurnsConsumptions.Sum(t => t.InputTokens);
+        public int TotalInputTokens => TurnsInformation.Sum(t => t.InputTokens);
 
-        public int TotalOutputTokens => TurnsConsumptions.Sum(t => t.OutputTokens);
+        public int TotalOutputTokens => TurnsInformation.Sum(t => t.OutputTokens);
 
-        public int TotalToolCalls => TurnsConsumptions.Sum(t => t.ToolCalls);
+        public int TotalToolCalls => TurnsInformation.Sum(t => t.ToolCalls);
 
-        public int TotalTurns => TurnsConsumptions.Count;
+        public int TotalTurns => TurnsInformation.Count;
 
 
 
         public int TotalTokens => TotalInputTokens + TotalOutputTokens;
+
+
+
+
+        [JsonIgnore]
+        public abstract string[] UserMessages { get; }
+
     }
 }

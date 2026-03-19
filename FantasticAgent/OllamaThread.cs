@@ -350,8 +350,8 @@ namespace FantasticAgent
 
                         if (c.Done)
                         {
-                            LastTurnConsumption.InputTokens = c.InputTokens.Value;
-                            LastTurnConsumption.ModelOutputTokens = c.OutputTokens.Value;
+                            LastTurnInformation.InputTokens = c.InputTokens.Value;
+                            LastTurnInformation.ModelOutputTokens = c.OutputTokens.Value;
                         }
                     }
 
@@ -379,7 +379,7 @@ namespace FantasticAgent
                             try
                             {
                                 result = ExecuteFunctionCall(tc.Function);
-                                LastTurnConsumption.ToolCalls++;
+                                LastTurnInformation.ToolCalls++;
                             }
                             catch(Exception e)
                             {
@@ -508,8 +508,8 @@ namespace FantasticAgent
 
                     if (c.Done)
                     {
-                        LastTurnConsumption.InputTokens = c.InputTokens.Value;
-                        LastTurnConsumption.ModelOutputTokens = c.OutputTokens.Value;
+                        LastTurnInformation.InputTokens = c.InputTokens.Value;
+                        LastTurnInformation.ModelOutputTokens = c.OutputTokens.Value;
                     }
 
                     string thinking = ThinkingFromThreadResponse([c]);
@@ -530,7 +530,7 @@ namespace FantasticAgent
                             try
                             {
                                 result = ExecuteFunctionCall(tc.Function);
-                                LastTurnConsumption.ToolCalls++;
+                                LastTurnInformation.ToolCalls++;
 
                             }
                             catch (Exception e)
@@ -576,7 +576,24 @@ namespace FantasticAgent
         }
 
 
+        public override string[] UserMessages
+        {
+            get
+            {
+                List<string> messages = new List<string>();
+                foreach (var ms in ActiveRequest.TurnMessages)
+                {
+                    if (ms.Role == "user" && ms.Content != null)
+                    {
 
+                        messages.Add(ms.Content);
+
+
+                    }
+                }
+                return messages.ToArray();
+            }
+        }
 
     }
 
