@@ -67,7 +67,7 @@ namespace FantasticAgent.Base
 
         protected LLMThreadDebugger<LLMThread<RQ, RP, TM>> _LLMLogger;
 
-        public LLMThreadDebugger<LLMThread<RQ, RP, TM>> LLMLogger
+        protected LLMThreadDebugger<LLMThread<RQ, RP, TM>> LLMLogger
         {
             get { return _LLMLogger; }
             set { _LLMLogger = value; }
@@ -285,7 +285,7 @@ namespace FantasticAgent.Base
 
         }
 
-        public virtual void LogResponseEvent(string eventLine)
+        protected virtual void LogResponseEvent(string eventLine)
         {
 
             // in case it didn't created 
@@ -302,7 +302,7 @@ namespace FantasticAgent.Base
 
         }
 
-        public virtual void LogEventsFinishedFile()
+        protected virtual void LogEventsFinishedFile()
         {
 
             using (var cllog = new StreamWriter(TurnsLogFileName, true))
@@ -319,7 +319,7 @@ namespace FantasticAgent.Base
 
         }
 
-        public virtual void LogRequest(string json)
+        protected virtual void LogRequest(string json)
         {
             using (var cllog = new StreamWriter(TurnsLogFileName, true))
             {
@@ -333,7 +333,7 @@ namespace FantasticAgent.Base
             }
         }
 
-        public virtual void LogException(Exception ex)
+        protected virtual void LogException(Exception ex)
         {
             using (var cllog = new StreamWriter(TurnsLogFileName, true))
             {
@@ -358,7 +358,7 @@ namespace FantasticAgent.Base
             catch { return json; }
         }
 
-        public virtual void LogResponseError(HttpStatusCode statusCode, string body)
+        protected virtual void LogResponseError(HttpStatusCode statusCode, string body)
         {
             using (var cllog = new StreamWriter(TurnsLogFileName, true))
             {
@@ -378,7 +378,7 @@ namespace FantasticAgent.Base
         }
 
 
-        public virtual void LogResponse(string json)
+        protected virtual void LogResponse(string json)
         {
             using (var cllog = new StreamWriter(TurnsLogFileName, true))
             {
@@ -414,6 +414,10 @@ namespace FantasticAgent.Base
 
         protected int TurnId = 0;
 
+        public LLMTurnConsumption? LastTurnConsumption { get; private set; }
+
+        public List<LLMTurnConsumption> TurnsConsumptions { get; private set; } = new List<LLMTurnConsumption>();
+
         public virtual async Task SendToLLMThread()
         {
             if (OnGoingCall)
@@ -422,8 +426,12 @@ namespace FantasticAgent.Base
             OnGoingCall = true;
 
             TurnId++;
+            LastTurnConsumption = new LLMTurnConsumption { TurnIndex = TurnId };
 
             await OnStreamSend();
+
+            if (LastTurnConsumption != null)
+                TurnsConsumptions.Add(LastTurnConsumption);
 
         }
 
@@ -439,11 +447,14 @@ namespace FantasticAgent.Base
                 return;
 
             OnGoingCall = true;
+            LastTurnConsumption = new LLMTurnConsumption { TurnIndex = TurnId };
 
             TurnId++;
 
 
             await OnNoStreamSend();
+            if (LastTurnConsumption != null)
+                TurnsConsumptions.Add(LastTurnConsumption);
 
         }
 
@@ -452,5 +463,19 @@ namespace FantasticAgent.Base
         {
             throw new NotImplementedException();
         }
+
+
+
+        public int TotalInputTokens => TurnsConsumptions.Sum(t => t.InputTokens);
+
+        public int TotalOutputTokens => TurnsConsumptions.Sum(t => t.OutputTokens);
+
+        public int TotalToolCalls => TurnsConsumptions.Sum(t => t.ToolCalls);
+
+        public int TotalTurns => TurnsConsumptions.Count;
+
+
+
+        public int TotalTokens => TotalInputTokens + TotalOutputTokens;
     }
 }

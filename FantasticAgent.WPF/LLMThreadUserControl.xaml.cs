@@ -77,6 +77,53 @@ namespace FantasticAgent.WPF
                 new PropertyMetadata(0)); // Default value is 0
 
 
+
+
+        public int TotalInputTokens
+        {
+            get { return (int)GetValue(TotalInputTokensProperty); }
+            set { SetValue(TotalInputTokensProperty, value); }
+        }
+
+        // 2. The Dependency Property Registration
+        public static readonly DependencyProperty TotalInputTokensProperty =
+            DependencyProperty.Register(
+                nameof(TotalInputTokens),
+                typeof(int),
+                typeof(LLMThreadUserControl),
+                new PropertyMetadata(0)); // Default value is 0
+
+
+        public int TotalOutputTokens
+        {
+            get { return (int)GetValue(TotalOutputTokensProperty); }
+            set { SetValue(TotalOutputTokensProperty, value); }
+        }
+
+        // 2. The Dependency Property Registration
+        public static readonly DependencyProperty TotalOutputTokensProperty =
+            DependencyProperty.Register(
+                nameof(TotalOutputTokens),
+                typeof(int),
+                typeof(LLMThreadUserControl),
+                new PropertyMetadata(0)); // Default value is 0
+
+
+
+        public int TotalTurns
+        {
+            get { return (int)GetValue(TotalTurnsProperty); }
+            set { SetValue(TotalTurnsProperty, value); }
+        }
+
+        // 2. The Dependency Property Registration
+        public static readonly DependencyProperty TotalTurnsProperty =
+            DependencyProperty.Register(
+                nameof(TotalTurns),
+                typeof(int),
+                typeof(LLMThreadUserControl),
+                new PropertyMetadata(0)); // Default value is 0
+
         //
 
         public double RemainingBalance
@@ -205,6 +252,13 @@ namespace FantasticAgent.WPF
                     await _ActiveLLMThread.SendToLLMThread();
                 }
                 this.IsBusy = false;
+
+                TotalInputTokens = _ActiveLLMThread.TotalInputTokens;
+                TotalOutputTokens = _ActiveLLMThread.TotalOutputTokens;
+                TotalTurns = _ActiveLLMThread.TotalTurns;
+
+
+                
             }
         }
 
@@ -277,6 +331,7 @@ namespace FantasticAgent.WPF
                 CallCount = CallCount + 1;
             });
         }
+
 
         public void WriteText(string text)
         {

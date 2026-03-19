@@ -44,6 +44,13 @@ namespace FantasticAgent.Ollama
         }
 
 
+
+        [JsonPropertyName("prompt_eval_count")]
+        public int? InputTokens { get; set; }
+
+        [JsonPropertyName("eval_count")]
+        public int? OutputTokens { get; set; }
+
         public override string MessageContent => Message.Content;
 
         public override string MessageThinking => Message.Thinking;

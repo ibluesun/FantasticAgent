@@ -402,6 +402,10 @@ namespace FantasticAgent
                         return;
                     }
 
+                    LastTurnConsumption.InputTokens = completedEvent.response.Usage.InputTokens;
+                    LastTurnConsumption.ModelOutputTokens = completedEvent.response.Usage.OuputTokens - completedEvent.response.Usage.OutputTokenDetails.reasoning_tokens;
+                    LastTurnConsumption.ModelThinkingTokens = completedEvent.response.Usage.OutputTokenDetails.reasoning_tokens;
+
                     string reasoning = ReasoningFromThreadResponse(completedEvent!.response);  // we don't include thinking in the payload when we send the chat thread again
 
                     _LastReply = AssistantReplyFromThreadResponse(completedEvent.response);
@@ -433,6 +437,7 @@ namespace FantasticAgent
                             try
                             {
                                 result = ExecuteFunctionCall(ot);
+                                LastTurnConsumption.ToolCalls++;
                             }
                             catch (Exception e)
                             {
@@ -553,6 +558,10 @@ namespace FantasticAgent
                         return;
                     }
 
+                    LastTurnConsumption.InputTokens = c.Usage.InputTokens;
+                    LastTurnConsumption.ModelOutputTokens = c.Usage.OuputTokens - c.Usage.OutputTokenDetails.reasoning_tokens;
+                    LastTurnConsumption.ModelThinkingTokens = c.Usage.OutputTokenDetails.reasoning_tokens;
+
 
                     string reasoning = ReasoningFromThreadResponse(c);
                     _LastReply = AssistantReplyFromThreadResponse(c);
@@ -582,6 +591,8 @@ namespace FantasticAgent
                             try
                             {
                                 result = ExecuteFunctionCall(ot);
+
+                                LastTurnConsumption.ToolCalls++;
                             }
                             catch (Exception e)
                             {

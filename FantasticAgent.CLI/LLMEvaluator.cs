@@ -126,6 +126,23 @@ namespace FantasticAgent
                 return true;
             }
 
+
+            if (zz[0].ToUpperInvariant() == "USAGE")
+            {
+                //_terminal.WriteLine($"Last Input:{_MainThread.TurnsConsumptions.Last().InputTokens}");
+                //_terminal.WriteLine($"Last Ouput: {_MainThread.TurnsConsumptions.Last().OutputTokens}");
+                //_terminal.WriteLine($"Last Calls: {_MainThread.TurnsConsumptions.Last().ToolCalls}");
+
+                _terminal.WriteLine();
+                _terminal.WriteLine($"Total Turns : {_MainThread.TotalTurns}");
+                _terminal.WriteLine($"Input Tokens: {_MainThread.TotalInputTokens}");
+                _terminal.WriteLine($"Ouput Tokens: {_MainThread.TotalOutputTokens}");
+                _terminal.WriteLine($"Total Calls : {_MainThread.TotalToolCalls}");
+
+                return true;
+            }
+
+
             return false;
         }
 

@@ -347,16 +347,24 @@ namespace FantasticAgent
                         AnalyseEvent(c);
 
                         rrs.Add(c);
+
+                        if (c.Done)
+                        {
+                            LastTurnConsumption.InputTokens = c.InputTokens.Value;
+                            LastTurnConsumption.ModelOutputTokens = c.OutputTokens.Value;
+                        }
                     }
 
                     if (LogStreamingEvents) LogEventsFinishedFile();
 
+                    
 
                     string thinking = ThinkingFromThreadResponse(rrs);  // we don't include thinking in the payload when we send the chat thread again
 
                     _LastReply = AssistantReplyFromThreadResponse(rrs);
 
                     ToolCall[] calls = ToolCallsFromThreadResponse(rrs);
+
 
                     IsToolReplyPending = false;
 
@@ -371,6 +379,7 @@ namespace FantasticAgent
                             try
                             {
                                 result = ExecuteFunctionCall(tc.Function);
+                                LastTurnConsumption.ToolCalls++;
                             }
                             catch(Exception e)
                             {
@@ -497,6 +506,12 @@ namespace FantasticAgent
                         return;
                     }
 
+                    if (c.Done)
+                    {
+                        LastTurnConsumption.InputTokens = c.InputTokens.Value;
+                        LastTurnConsumption.ModelOutputTokens = c.OutputTokens.Value;
+                    }
+
                     string thinking = ThinkingFromThreadResponse([c]);
                     _LastReply = AssistantReplyFromThreadResponse([c]);
 
@@ -515,6 +530,8 @@ namespace FantasticAgent
                             try
                             {
                                 result = ExecuteFunctionCall(tc.Function);
+                                LastTurnConsumption.ToolCalls++;
+
                             }
                             catch (Exception e)
                             {

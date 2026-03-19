@@ -34,7 +34,7 @@ namespace FantasticAgent.WPF
         GeminiThread gemini;
 
 
-        string OllamaModel = "qwen3";
+        string OllamaModel = "qwen3.5";
 
         private bool OllamaExists(string url = "http://localhost:11434")
         {
@@ -116,15 +116,19 @@ namespace FantasticAgent.WPF
             }
         }
 
+        string SystemPrompt = "You are a helpful assistant.";
+
 
         void PrepareClaude()
         {
             if (!string.IsNullOrEmpty(ClaudeSecret))
             {
-                claude = new ClaudeThread(ClaudeSecret, "claude-sonnet-4-6", "You are a helpful assistant.");
+                claude = new ClaudeThread(ClaudeSecret, "claude-sonnet-4-6", SystemPrompt);
                 claude.ActiveRequest.Reasoning = new ClaudeReasoning();
                 claude.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
 
+                claude.LogTurns = true;
+                claude.LogStreamingEvents = true;
 
 
                 ClaudeThreadUC.ActiveLLMThread = claude;
@@ -142,10 +146,12 @@ namespace FantasticAgent.WPF
         {
             if (!string.IsNullOrEmpty(GPTSecret))
             {
-                gpt = new GPTThread(GPTSecret, "gpt-5.4", "You are a helpful assistant.");
+                gpt = new GPTThread(GPTSecret, "gpt-5.4", SystemPrompt);
                 gpt.ActiveRequest.Reasoning = new GPTReasoning() { Summary = ReasoningSummary.Auto };
                 gpt.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
 
+                gpt.LogTurns = true;
+                gpt.LogStreamingEvents = true;
 
                 GptThreadUC.ActiveLLMThread = gpt;
 
@@ -162,12 +168,16 @@ namespace FantasticAgent.WPF
         {
             if (!string.IsNullOrEmpty(GeminiSecret))
             {
-                gemini = new GeminiThread(GeminiSecret, "gemini-3.1-flash-lite-preview", "You are a helpful assistant.");
+                gemini = new GeminiThread(GeminiSecret, "gemini-3.1-pro-preview", SystemPrompt);
 
                 GeminiGenerationConfiguration conf = new GeminiGenerationConfiguration();
                 conf.ThinkingConfig = new GeminiThinkingConfiguration { IncludeThoughts = true, ThinkingLevel = ReasoningEffortLevel.Max };
                 gemini.ActiveRequest.Configuration = conf;
                 gemini.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
+
+
+                gemini.LogTurns = true;
+                gemini.LogStreamingEvents = true;
 
 
                 GeminiThreadUC.ActiveLLMThread = gemini;
@@ -188,8 +198,11 @@ namespace FantasticAgent.WPF
 
             if (ollamaExists)
             {
-                ollama = new OllamaThread("localhost", 11434, OllamaModel, "You are a helpful assistant.");
+                ollama = new OllamaThread("localhost", 11434, OllamaModel, SystemPrompt);
                 ollama.DeclareFunctionTool(typeof(WebSearchProviders).GetMethod("BraveSearch"));
+
+                ollama.LogTurns = true;
+                ollama.LogStreamingEvents = true;
 
 
                 OllamaThreadUC.ActiveLLMThread = ollama;

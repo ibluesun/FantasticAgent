@@ -36,5 +36,15 @@ namespace FantasticAgent.Base
 
         Task SendToLLMThread();
         void UserMessage(string text);
+
+
+
+        int TotalInputTokens { get; }
+
+        int TotalOutputTokens { get; }
+
+        int TotalToolCalls { get; }
+
+        int TotalTurns { get; }
     }
 }

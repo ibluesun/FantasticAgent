@@ -33,8 +33,11 @@ namespace FantasticAgent.GPT
 
 
         [JsonPropertyName("output")]
-        public List<GPTTurnMessage>? OuputMessages { get; set; } 
+        public List<GPTTurnMessage>? OuputMessages { get; set; }
 
+
+        [JsonPropertyName("usage")]
+        public GPTUsage? Usage { get; set; }
 
 
 

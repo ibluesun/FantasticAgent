@@ -262,6 +262,10 @@ namespace FantasticAgent
                         return;
                     }
 
+                    LastTurnConsumption.InputTokens = c.Usage.PromptTokenCount;
+                    LastTurnConsumption.ModelThinkingTokens = c.Usage.ThoughtsTokenCount;
+                    LastTurnConsumption.ModelOutputTokens = c.Usage.CandidatesTokenCount;
+
 
                     IsToolReplyPending = false;
                     // each candidate will be a turn message
@@ -277,6 +281,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(prt.FunctionCall);
+                                    LastTurnConsumption.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {
@@ -541,6 +546,12 @@ namespace FantasticAgent
                                 {
                                     c.Done = candy.FinishReason == "STOP";
                                     c.FinishReason = candy.FinishReason;
+
+                                    LastTurnConsumption.InputTokens = c.Usage.PromptTokenCount;
+                                    LastTurnConsumption.ModelThinkingTokens = c.Usage.ThoughtsTokenCount;
+                                    LastTurnConsumption.ModelOutputTokens = c.Usage.CandidatesTokenCount;
+
+
                                 }
                             }
 
@@ -578,6 +589,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(prt.FunctionCall);
+                                    LastTurnConsumption.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {

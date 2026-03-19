@@ -177,7 +177,7 @@ namespace FantasticAgent.CLI
             DotNetEnv.Env.Load();
 
 
-            var evl = GetHFEvaluator();
+            var evl = GetClaudeEvaluator();
             evl.LogStreamingEvents = true;
             evl.LogTurns = true;
 

@@ -365,7 +365,14 @@ namespace FantasticAgent
                         return;
                     }
 
+                    LastTurnConsumption.InputTokens = c.Usage.InputTokens;
+                    LastTurnConsumption.ModelOutputTokens = c.Usage.OuputTokens;
+
+
                     ActiveRequest.AssistantMessages(c.OuputMessages!);
+
+
+
 
                     IsToolReplyPending = false;
                     string toolname = "";
@@ -384,6 +391,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(fc);
+                                    LastTurnConsumption.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {
@@ -496,6 +504,10 @@ namespace FantasticAgent
                         return;
                     }
 
+                    LastTurnConsumption.InputTokens = c.Usage.InputTokens;
+                    LastTurnConsumption.ModelOutputTokens = c.Usage.OuputTokens;
+
+
                     ActiveRequest.AssistantMessages(c.OuputMessages!);
 
                     IsToolReplyPending = false;
@@ -513,6 +525,7 @@ namespace FantasticAgent
                                 try
                                 {
                                     result = ExecuteFunctionCall(fc);
+                                    LastTurnConsumption.ToolCalls++;
                                 }
                                 catch (Exception e)
                                 {
