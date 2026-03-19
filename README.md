@@ -46,7 +46,7 @@ The WPF demo shows three LLM providers (Ollama, Claude, ChatGPT) responding to t
 - [x] Multi-provider parallel execution  
 - [x] Event-driven streaming  
 - [x] Usage Monitoring
-- [x] NuGet package at https://www.nuget.org/packages/SymbolicAlgebra/
+- [x] NuGet package at https://www.nuget.org/packages/fantasticagent/
 - [ ] Full agent orchestration (figuring it out)
 
 ## Supported Providers
